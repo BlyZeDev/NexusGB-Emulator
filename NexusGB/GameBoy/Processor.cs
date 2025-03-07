@@ -515,7 +515,14 @@ public sealed class Processor
 
     private void PrefixCB(in byte opCode)
     {
+        switch (opCode)
+        {
 
+
+            default: UnsupportedOpCode(opCode); break;
+        }
+
+        cycles += _cyclesFixedValues[opCode];
     }
 
     private void Bit(in byte bit, in byte registry)
