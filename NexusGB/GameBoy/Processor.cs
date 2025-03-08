@@ -148,6 +148,29 @@ public sealed class Processor
         programCounter = 0x100;
     }
 
+    public void UpdateIme()
+    {
+        ime |= imeEnabler;
+        imeEnabler = false;
+    }
+
+    public void ExecuteInterrupt(in int value)
+    {
+        if (halted)
+        {
+            programCounter++;
+            halted = false;
+        }
+
+        if (ime)
+        {
+            Push(programCounter);
+            programCounter = (ushort)(0x40 + 8 * value);
+            ime = false;
+            Bits.Clear(ref _mmu.InterruptFlag, value);
+        }
+    }
+
     public int Execute()
     {
         var opCode = _mmu.ReadByte(programCounter++);
@@ -517,9 +540,437 @@ public sealed class Processor
     {
         switch (opCode)
         {
+            case 0x00: RotateLeftCarry(ref regB); break;
+            case 0x01: RotateLeftCarry(ref regC); break;
+            case 0x02: RotateLeftCarry(ref regD); break;
+            case 0x03: RotateLeftCarry(ref regE); break;
+            case 0x04: RotateLeftCarry(ref regH); break;
+            case 0x05: RotateLeftCarry(ref regL); break;
+            case 0x06:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    RotateLeftCarry(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x07: RotateLeftCarry(ref regA); break;
 
+            case 0x08: RotateRightCarry(ref regB); break;
+            case 0x09: RotateRightCarry(ref regC); break;
+            case 0x0A: RotateRightCarry(ref regD); break;
+            case 0x0B: RotateRightCarry(ref regE); break;
+            case 0x0C: RotateRightCarry(ref regH); break;
+            case 0x0D: RotateRightCarry(ref regL); break;
+            case 0x0E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    RotateRightCarry(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x0F: RotateRightCarry(ref regA); break;
 
-            default: UnsupportedOpCode(opCode); break;
+            case 0x10: RotateLeft(ref regB); break;
+            case 0x11: RotateLeft(ref regC); break;
+            case 0x12: RotateLeft(ref regD); break;
+            case 0x13: RotateLeft(ref regE); break;
+            case 0x14: RotateLeft(ref regH); break;
+            case 0x15: RotateLeft(ref regL); break;
+            case 0x16:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    RotateLeft(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x17: RotateLeft(ref regA); break;
+
+            case 0x18: RotateRight(ref regB); break;
+            case 0x19: RotateRight(ref regC); break;
+            case 0x1A: RotateRight(ref regD); break;
+            case 0x1B: RotateRight(ref regE); break;
+            case 0x1C: RotateRight(ref regH); break;
+            case 0x1D: RotateRight(ref regL); break;
+            case 0x1E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    RotateRight(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x1F: RotateRight(ref regA); break;
+
+            case 0x20: ShiftLeftAr(ref regB); break;
+            case 0x21: ShiftLeftAr(ref regC); break;
+            case 0x22: ShiftLeftAr(ref regD); break;
+            case 0x23: ShiftLeftAr(ref regE); break;
+            case 0x24: ShiftLeftAr(ref regH); break;
+            case 0x25: ShiftLeftAr(ref regL); break;
+            case 0x26:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    ShiftLeftAr(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x27: ShiftLeftAr(ref regA); break;
+
+            case 0x28: ShiftRightAr(ref regB); break;
+            case 0x29: ShiftRightAr(ref regC); break;
+            case 0x2A: ShiftRightAr(ref regD); break;
+            case 0x2B: ShiftRightAr(ref regE); break;
+            case 0x2C: ShiftRightAr(ref regH); break;
+            case 0x2D: ShiftRightAr(ref regL); break;
+            case 0x2E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    ShiftRightAr(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x2F: ShiftRightAr(ref regA); break;
+
+            case 0x30: Swap(ref regB); break;
+            case 0x31: Swap(ref regC); break;
+            case 0x32: Swap(ref regD); break;
+            case 0x33: Swap(ref regE); break;
+            case 0x34: Swap(ref regH); break;
+            case 0x35: Swap(ref regL); break;
+            case 0x36:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    Swap(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x37: Swap(ref regA); break;
+
+            case 0x38: ShiftRightLog(ref regB); break;
+            case 0x39: ShiftRightLog(ref regC); break;
+            case 0x3A: ShiftRightLog(ref regD); break;
+            case 0x3B: ShiftRightLog(ref regE); break;
+            case 0x3C: ShiftRightLog(ref regH); break;
+            case 0x3D: ShiftRightLog(ref regL); break;
+            case 0x3E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    ShiftRightLog(ref read);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x3F: ShiftRightLog(ref regA); break;
+
+            case 0x40: Bit(0x01, regB); break;
+            case 0x41: Bit(0x01, regC); break;
+            case 0x42: Bit(0x01, regD); break;
+            case 0x43: Bit(0x01, regE); break;
+            case 0x44: Bit(0x01, regH); break;
+            case 0x45: Bit(0x01, regL); break;
+            case 0x46: Bit(0x01, _mmu.ReadByte(HL)); break;
+            case 0x47: Bit(0x01, regA); break;
+
+            case 0x48: Bit(0x02, regB); break;
+            case 0x49: Bit(0x02, regC); break;
+            case 0x4A: Bit(0x02, regD); break;
+            case 0x4B: Bit(0x02, regE); break;
+            case 0x4C: Bit(0x02, regH); break;
+            case 0x4D: Bit(0x02, regL); break;
+            case 0x4E: Bit(0x02, _mmu.ReadByte(HL)); break;
+            case 0x4F: Bit(0x02, regA); break;
+
+            case 0x50: Bit(0x04, regB); break;
+            case 0x51: Bit(0x04, regC); break;
+            case 0x52: Bit(0x04, regD); break;
+            case 0x53: Bit(0x04, regE); break;
+            case 0x54: Bit(0x04, regH); break;
+            case 0x55: Bit(0x04, regL); break;
+            case 0x56: Bit(0x04, _mmu.ReadByte(HL)); break;
+            case 0x57: Bit(0x04, regA); break;
+
+            case 0x58: Bit(0x08, regB); break;
+            case 0x59: Bit(0x08, regC); break;
+            case 0x5A: Bit(0x08, regD); break;
+            case 0x5B: Bit(0x08, regE); break;
+            case 0x5C: Bit(0x08, regH); break;
+            case 0x5D: Bit(0x08, regL); break;
+            case 0x5E: Bit(0x08, _mmu.ReadByte(HL)); break;
+            case 0x5F: Bit(0x08, regA); break;
+
+            case 0x60: Bit(0x10, regB); break;
+            case 0x61: Bit(0x10, regC); break;
+            case 0x62: Bit(0x10, regD); break;
+            case 0x63: Bit(0x10, regE); break;
+            case 0x64: Bit(0x10, regH); break;
+            case 0x65: Bit(0x10, regL); break;
+            case 0x66: Bit(0x10, _mmu.ReadByte(HL)); break;
+            case 0x67: Bit(0x10, regA); break;
+
+            case 0x68: Bit(0x20, regB); break;
+            case 0x69: Bit(0x20, regC); break;
+            case 0x6A: Bit(0x20, regD); break;
+            case 0x6B: Bit(0x20, regE); break;
+            case 0x6C: Bit(0x20, regH); break;
+            case 0x6D: Bit(0x20, regL); break;
+            case 0x6E: Bit(0x20, _mmu.ReadByte(HL)); break;
+            case 0x6F: Bit(0x20, regA); break;
+
+            case 0x70: Bit(0x40, regB); break;
+            case 0x71: Bit(0x40, regC); break;
+            case 0x72: Bit(0x40, regD); break;
+            case 0x73: Bit(0x40, regE); break;
+            case 0x74: Bit(0x40, regH); break;
+            case 0x75: Bit(0x40, regL); break;
+            case 0x76: Bit(0x40, _mmu.ReadByte(HL)); break;
+            case 0x77: Bit(0x40, regA); break;
+
+            case 0x78: Bit(0x80, regB); break;
+            case 0x79: Bit(0x80, regC); break;
+            case 0x7A: Bit(0x80, regD); break;
+            case 0x7B: Bit(0x80, regE); break;
+            case 0x7C: Bit(0x80, regH); break;
+            case 0x7D: Bit(0x80, regL); break;
+            case 0x7E: Bit(0x80, _mmu.ReadByte(HL)); break;
+            case 0x7F: Bit(0x80, regA); break;
+
+            case 0x80: UnsetFlag(ref regB, 0x01); break;
+            case 0x81: UnsetFlag(ref regC, 0x01); break;
+            case 0x82: UnsetFlag(ref regD, 0x01); break;
+            case 0x83: UnsetFlag(ref regE, 0x01); break;
+            case 0x84: UnsetFlag(ref regH, 0x01); break;
+            case 0x85: UnsetFlag(ref regL, 0x01); break;
+            case 0x86:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x01);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x87: UnsetFlag(ref regA, 0x01); break;
+
+            case 0x88: UnsetFlag(ref regB, 0x02); break;
+            case 0x89: UnsetFlag(ref regC, 0x02); break;
+            case 0x8A: UnsetFlag(ref regD, 0x02); break;
+            case 0x8B: UnsetFlag(ref regE, 0x02); break;
+            case 0x8C: UnsetFlag(ref regH, 0x02); break;
+            case 0x8D: UnsetFlag(ref regL, 0x02); break;
+            case 0x8E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x02);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x8F: UnsetFlag(ref regA, 0x02); break;
+
+            case 0x90: UnsetFlag(ref regB, 0x04); break;
+            case 0x91: UnsetFlag(ref regC, 0x04); break;
+            case 0x92: UnsetFlag(ref regD, 0x04); break;
+            case 0x93: UnsetFlag(ref regE, 0x04); break;
+            case 0x94: UnsetFlag(ref regH, 0x04); break;
+            case 0x95: UnsetFlag(ref regL, 0x04); break;
+            case 0x96:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x04);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x97: UnsetFlag(ref regA, 0x04); break;
+
+            case 0x98: UnsetFlag(ref regB, 0x08); break;
+            case 0x99: UnsetFlag(ref regC, 0x08); break;
+            case 0x9A: UnsetFlag(ref regD, 0x08); break;
+            case 0x9B: UnsetFlag(ref regE, 0x08); break;
+            case 0x9C: UnsetFlag(ref regH, 0x08); break;
+            case 0x9D: UnsetFlag(ref regL, 0x08); break;
+            case 0x9E:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x08);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0x9F: UnsetFlag(ref regA, 0x08); break;
+
+            case 0xA0: UnsetFlag(ref regB, 0x10); break;
+            case 0xA1: UnsetFlag(ref regC, 0x10); break;
+            case 0xA2: UnsetFlag(ref regD, 0x10); break;
+            case 0xA3: UnsetFlag(ref regE, 0x10); break;
+            case 0xA4: UnsetFlag(ref regH, 0x10); break;
+            case 0xA5: UnsetFlag(ref regL, 0x10); break;
+            case 0xA6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x10);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xA7: UnsetFlag(ref regA, 0x10); break;
+
+            case 0xA8: UnsetFlag(ref regB, 0x20); break;
+            case 0xA9: UnsetFlag(ref regC, 0x20); break;
+            case 0xAA: UnsetFlag(ref regD, 0x20); break;
+            case 0xAB: UnsetFlag(ref regE, 0x20); break;
+            case 0xAC: UnsetFlag(ref regH, 0x20); break;
+            case 0xAD: UnsetFlag(ref regL, 0x20); break;
+            case 0xAE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x20);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xAF: UnsetFlag(ref regA, 0x20); break;
+
+            case 0xB0: UnsetFlag(ref regB, 0x40); break;
+            case 0xB1: UnsetFlag(ref regC, 0x40); break;
+            case 0xB2: UnsetFlag(ref regD, 0x40); break;
+            case 0xB3: UnsetFlag(ref regE, 0x40); break;
+            case 0xB4: UnsetFlag(ref regH, 0x40); break;
+            case 0xB5: UnsetFlag(ref regL, 0x40); break;
+            case 0xB6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x40);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xB7: UnsetFlag(ref regA, 0x40); break;
+
+            case 0xB8: UnsetFlag(ref regB, 0x80); break;
+            case 0xB9: UnsetFlag(ref regC, 0x80); break;
+            case 0xBA: UnsetFlag(ref regD, 0x80); break;
+            case 0xBB: UnsetFlag(ref regE, 0x80); break;
+            case 0xBC: UnsetFlag(ref regH, 0x80); break;
+            case 0xBD: UnsetFlag(ref regL, 0x80); break;
+            case 0xBE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    UnsetFlag(ref read, 0x80);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xBF: UnsetFlag(ref regA, 0x80); break;
+
+            case 0xC0: SetFlag(ref regB, 0x01); break;
+            case 0xC1: SetFlag(ref regC, 0x01); break;
+            case 0xC2: SetFlag(ref regD, 0x01); break;
+            case 0xC3: SetFlag(ref regE, 0x01); break;
+            case 0xC4: SetFlag(ref regH, 0x01); break;
+            case 0xC5: SetFlag(ref regL, 0x01); break;
+            case 0xC6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x01);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xC7: SetFlag(ref regA, 0x01); break;
+
+            case 0xC8: SetFlag(ref regB, 0x02); break;
+            case 0xC9: SetFlag(ref regC, 0x02); break;
+            case 0xCA: SetFlag(ref regD, 0x02); break;
+            case 0xCB: SetFlag(ref regE, 0x02); break;
+            case 0xCC: SetFlag(ref regH, 0x02); break;
+            case 0xCD: SetFlag(ref regL, 0x02); break;
+            case 0xCE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x02);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xCF: SetFlag(ref regA, 0x02); break;
+
+            case 0xD0: SetFlag(ref regB, 0x04); break;
+            case 0xD1: SetFlag(ref regC, 0x04); break;
+            case 0xD2: SetFlag(ref regD, 0x04); break;
+            case 0xD3: SetFlag(ref regE, 0x04); break;
+            case 0xD4: SetFlag(ref regH, 0x04); break;
+            case 0xD5: SetFlag(ref regL, 0x04); break;
+            case 0xD6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x04);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xD7: SetFlag(ref regA, 0x04); break;
+
+            case 0xD8: SetFlag(ref regB, 0x08); break;
+            case 0xD9: SetFlag(ref regC, 0x08); break;
+            case 0xDA: SetFlag(ref regD, 0x08); break;
+            case 0xDB: SetFlag(ref regE, 0x08); break;
+            case 0xDC: SetFlag(ref regH, 0x08); break;
+            case 0xDD: SetFlag(ref regL, 0x08); break;
+            case 0xDE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x08);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xDF: SetFlag(ref regA, 0x08); break;
+
+            case 0xE0: SetFlag(ref regB, 0x10); break;
+            case 0xE1: SetFlag(ref regC, 0x10); break;
+            case 0xE2: SetFlag(ref regD, 0x10); break;
+            case 0xE3: SetFlag(ref regE, 0x10); break;
+            case 0xE4: SetFlag(ref regH, 0x10); break;
+            case 0xE5: SetFlag(ref regL, 0x10); break;
+            case 0xE6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x010);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xE7: SetFlag(ref regA, 0x10); break;
+
+            case 0xE8: SetFlag(ref regB, 0x20); break;
+            case 0xE9: SetFlag(ref regC, 0x20); break;
+            case 0xEA: SetFlag(ref regD, 0x20); break;
+            case 0xEB: SetFlag(ref regE, 0x20); break;
+            case 0xEC: SetFlag(ref regH, 0x20); break;
+            case 0xED: SetFlag(ref regL, 0x20); break;
+            case 0xEE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x20);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xEF: SetFlag(ref regA, 0x20); break;
+
+            case 0xF0: SetFlag(ref regB, 0x40); break;
+            case 0xF1: SetFlag(ref regC, 0x40); break;
+            case 0xF2: SetFlag(ref regD, 0x40); break;
+            case 0xF3: SetFlag(ref regE, 0x40); break;
+            case 0xF4: SetFlag(ref regH, 0x40); break;
+            case 0xF5: SetFlag(ref regL, 0x40); break;
+            case 0xF6:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x040);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xF7: SetFlag(ref regA, 0x40); break;
+
+            case 0xF8: SetFlag(ref regB, 0x80); break;
+            case 0xF9: SetFlag(ref regC, 0x80); break;
+            case 0xFA: SetFlag(ref regD, 0x80); break;
+            case 0xFB: SetFlag(ref regE, 0x80); break;
+            case 0xFC: SetFlag(ref regH, 0x80); break;
+            case 0xFD: SetFlag(ref regL, 0x80); break;
+            case 0xFE:
+                {
+                    var read = _mmu.ReadByte(HL);
+                    SetFlag(ref read, 0x80);
+                    _mmu.WriteByte(HL, read);
+                }
+                break;
+            case 0xFF: SetFlag(ref regA, 0x80); break;
         }
 
         cycles += _cyclesFixedValues[opCode];
@@ -532,13 +983,13 @@ public sealed class Processor
         FlagH = true;
     }
 
-    private void ShiftRightLog(in byte bit)
+    private void ShiftRightLog(ref byte bit)
     {
-        var result = (byte)(bit >> 1);
-        SetFlagZ(result);
+        bit = (byte)(bit >> 1);
+        SetFlagZ(bit);
         FlagN = false;
         FlagH = false;
-        FlagC = (result & 0x01) != 0;
+        FlagC = (bit & 0x01) != 0;
     }
 
     private void Swap(ref byte bit)
@@ -559,7 +1010,7 @@ public sealed class Processor
         FlagC = (bit & 0x01) != 0;
     }
 
-    private void ShiftLeft(ref byte bit)
+    private void ShiftLeftAr(ref byte bit)
     {
         bit = (byte)(bit << 1);
         SetFlagZ(bit);
@@ -796,29 +1247,6 @@ public sealed class Processor
                 programCounter--;
             }
             else haltBug = true;
-        }
-    }
-
-    private void UpdateIme()
-    {
-        ime |= imeEnabler;
-        imeEnabler = false;
-    }
-
-    private void ExecuteInterrupt(in int value)
-    {
-        if (halted)
-        {
-            programCounter++;
-            halted = false;
-        }
-
-        if (ime)
-        {
-            Push(programCounter);
-            programCounter = (ushort)(0x40 + 8 * value);
-            ime = false;
-            Bits.Clear(ref _mmu.InterruptFlag, value);
         }
     }
 

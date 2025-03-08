@@ -2,6 +2,7 @@
 
 using NexusGB.GameBoy.GamePaks;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 
 public sealed class MemoryManagement : IDisposable
 {
@@ -157,6 +158,9 @@ public sealed class MemoryManagement : IDisposable
         WriteByte((ushort)(address + 1), (byte)(word >> 8));
         WriteByte(address, (byte)word);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void RequestInterrupt(in byte value) => Bits.Set(ref InterruptFlag, value);
 
     public void Dispose()
     {

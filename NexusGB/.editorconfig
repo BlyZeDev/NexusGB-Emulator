@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# IDE0220: Explizite Umwandlung hinzufügen
+dotnet_diagnostic.IDE0220.severity = silent
