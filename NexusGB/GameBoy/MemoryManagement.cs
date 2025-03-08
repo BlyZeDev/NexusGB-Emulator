@@ -4,7 +4,7 @@ using NexusGB.GameBoy.GamePaks;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 
-public sealed class MemoryManagement : IDisposable
+public sealed class MemoryManagement
 {
     private readonly IGamePak _gamepak;
 
@@ -33,7 +33,7 @@ public sealed class MemoryManagement : IDisposable
     public ref byte LCDControlY => ref _io[0x44];
     public byte LYCompare => _io[0x45];
 
-    public byte BGPalette => _io[0x47];
+    public byte BackgroundPalette => _io[0x47];
     public byte ObjectPalette0 => _io[0x48];
     public byte ObjectPalette1 => _io[0x49];
 
@@ -46,12 +46,12 @@ public sealed class MemoryManagement : IDisposable
     {
         _gamepak = gamepak;
 
-        _vram = ArrayPool<byte>.Shared.Rent(8192);
-        _wram0 = ArrayPool<byte>.Shared.Rent(4096);
-        _wram1 = ArrayPool<byte>.Shared.Rent(4096);
-        _oam = ArrayPool<byte>.Shared.Rent(160);
-        _io = ArrayPool<byte>.Shared.Rent(128);
-        _hram = ArrayPool<byte>.Shared.Rent(128);
+        _vram = new byte[8192];
+        _wram0 = new byte[4096];
+        _wram1 = new byte[4096];
+        _oam = new byte[160];
+        _io = new byte[128];
+        _hram = new byte[128];
 
         _io[0x4D] = 0xFF;
 
@@ -159,18 +159,12 @@ public sealed class MemoryManagement : IDisposable
         WriteByte(address, (byte)word);
     }
 
+    public byte ReadVRAM(in int address) => _vram[address & 0x1FFF];
+
+    public byte ReadOAM(in int address) => _oam[address];
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RequestInterrupt(in byte value) => Bits.Set(ref InterruptFlag, value);
-
-    public void Dispose()
-    {
-        ArrayPool<byte>.Shared.Return(_vram);
-        ArrayPool<byte>.Shared.Return(_wram0);
-        ArrayPool<byte>.Shared.Return(_wram1);
-        ArrayPool<byte>.Shared.Return(_oam);
-        ArrayPool<byte>.Shared.Return(_io);
-        ArrayPool<byte>.Shared.Return(_hram);
-    }
 
     private byte DirectMemoryAccess(in byte value)
     {

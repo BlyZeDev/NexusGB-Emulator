@@ -519,6 +519,7 @@ public sealed class Processor
             case 0xF1: AF = Pop(); break;
             case 0xF2: regA = _mmu.ReadByte((ushort)(0xFF00 + regC)); break;
             case 0xF3: ime = false; break;
+            case 0xF4: break;
             case 0xF5: Push(AF); break;
             case 0xF6: Or(_mmu.ReadByte(programCounter++)); break;
             case 0xF7: Restart(0x30); break;
@@ -530,7 +531,7 @@ public sealed class Processor
             case 0xFE: Compare(_mmu.ReadByte(programCounter++)); break;
             case 0xFF: Restart(0x38); break;
 
-            default: UnsupportedOpCode(opCode); break;
+            //default: UnsupportedOpCode(opCode); break;
         }
         cycles += _cyclesValues[opCode];
         return cycles;
@@ -1274,5 +1275,5 @@ public sealed class Processor
     private void SetFlagHSub(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) < (byte2 & 0x0F);
     private void SetFlagHSubCarry(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) < (byte2 & 0x0F) + (FlagC ? 1 : 0);
 
-    private void UnsupportedOpCode(in byte opCode) => throw new NotSupportedException($"{programCounter - 1:X4} Unsupported Operation Code {opCode:X2}");
+    //private void UnsupportedOpCode(in byte opCode) => throw new NotSupportedException($"{programCounter - 1:X4} Unsupported Operation Code {opCode:X2}");
 }

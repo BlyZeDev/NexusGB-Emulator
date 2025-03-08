@@ -1,6 +1,6 @@
 ﻿namespace NexusGB.GameBoy.GamePaks;
 
-public interface IGamePak : IDisposable
+public interface IGamePak
 {
     public byte ReadLowROM(in ushort address);
     public byte ReadHighROM(in ushort address);

@@ -1,7 +1,5 @@
 ﻿namespace NexusGB.GameBoy.GamePaks;
 
-using System.Buffers;
-
 public sealed class MemoryController1 : IGamePak
 {
     private const int ROM_OFFSET = 0x4000;
@@ -19,7 +17,7 @@ public sealed class MemoryController1 : IGamePak
     {
         _rom = rom;
 
-        _eram = ArrayPool<byte>.Shared.Rent(8192);
+        _eram = new byte[8192];
 
         romBank = 1;
     }
@@ -59,6 +57,4 @@ public sealed class MemoryController1 : IGamePak
             case <= 0x8000: bankingMode = value & 0x01; break;
         }
     }
-
-    public void Dispose() => ArrayPool<byte>.Shared.Return(_eram);
 }

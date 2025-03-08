@@ -11,6 +11,4 @@ public sealed class MemoryController0 : IGamePak
     public byte ReadLowROM(in ushort address) => _rom[address];
     public void WriteERAM(in ushort address, in byte value) { }
     public void WriteROM(in ushort address, in byte value) { }
-
-    public void Dispose() { }
 }
