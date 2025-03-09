@@ -3,6 +3,7 @@
 using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
+using Microsoft.VisualBasic;
 using NexusGB.GameBoy;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
@@ -17,8 +18,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private readonly Timer _timer;
     private readonly Joypad _joypad;
 
-    private int cpuCycles = 0;
-    private int cyclesThisUpdate = 0;
+    private double accumulatedTime;
+    private int cpuCycles;
+    private int cyclesThisUpdate;
 
     public GameBoyEmulator(string rom)
     {
@@ -41,18 +43,25 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         _joypad.HandleInputs(inputs.Keys);
 
-        while (cyclesThisUpdate < CYCLES_PER_UPDATE)
+        accumulatedTime += DeltaTime * 1_000_000_000;
+
+        while (accumulatedTime >= 16740000)
         {
-            cpuCycles = _cpu.Execute();
-            cyclesThisUpdate += cpuCycles;
+            accumulatedTime -= 16740000;
 
-            _timer.Update(cpuCycles);
-            _ppu.Update(cpuCycles);
-            _joypad.Update();
-            HandleInterrupts();
+            while (cyclesThisUpdate < CYCLES_PER_UPDATE)
+            {
+                cpuCycles = _cpu.Execute();
+                cyclesThisUpdate += cpuCycles;
+
+                _timer.Update(cpuCycles);
+                _ppu.Update(cpuCycles);
+                _joypad.Update();
+                HandleInterrupts();
+            }
+
+            cyclesThisUpdate -= CYCLES_PER_UPDATE;
         }
-
-        cyclesThisUpdate -= CYCLES_PER_UPDATE;
     }
 
     protected override void OnCrash(Exception exception)

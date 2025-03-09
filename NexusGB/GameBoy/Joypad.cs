@@ -21,15 +21,15 @@ public sealed class Joypad
         pad = 0x0F;
         buttons = 0x0F;
 
-        byte keyBit;
+        byte keyCode;
         foreach (var key in keys)
         {
-            keyBit = GetKeyCode(key);
+            keyCode = GetKeyCode(key);
 
-            if ((keyBit & PAD_MASK) == PAD_MASK)
-                pad = (byte)(pad & ~(keyBit & 0x0F));
-            else if ((keyBit & BUTTON_MASK) == BUTTON_MASK)
-                buttons = (byte)(buttons & ~(keyBit & 0x0F));
+            if ((keyCode & PAD_MASK) == PAD_MASK)
+                pad = (byte)(pad & ~(keyCode & 0x0F));
+            else if ((keyCode & BUTTON_MASK) == BUTTON_MASK)
+                buttons = (byte)(buttons & ~(keyCode & 0x0F));
         }
     }
 

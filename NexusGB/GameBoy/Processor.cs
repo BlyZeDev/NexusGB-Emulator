@@ -38,25 +38,25 @@ public sealed class Processor
 
     private static readonly ImmutableArray<int> _cyclesFixedValues =
     [
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        
-        8,  8,  8,  8,  8,  8, 12,  8,  8,  8,  8,  8,  8,  8, 12,  8,
-        8,  8,  8,  8,  8,  8, 12,  8,  8,  8,  8,  8,  8,  8, 12,  8,
-        8,  8,  8,  8,  8,  8, 12,  8,  8,  8,  8,  8,  8,  8, 12,  8,
-        8,  8,  8,  8,  8,  8, 12,  8,  8,  8,  8,  8,  8,  8, 12,  8,
-        
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8,
-        8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+                                                   
+        8,8,8,8,8,8,12,8,8,8,8,8,8,8,12,8,
+        8,8,8,8,8,8,12,8,8,8,8,8,8,8,12,8,
+        8,8,8,8,8,8,12,8,8,8,8,8,8,8,12,8,
+        8,8,8,8,8,8,12,8,8,8,8,8,8,8,12,8,
+                                                   
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+                                                   
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8,
+        8,8,8,8,8,8,16,8,8,8,8,8,8,8,16,8
     ];
 
     private readonly MemoryManagement _mmu;
@@ -143,9 +143,9 @@ public sealed class Processor
         AF = 0x01B0;
         BC = 0x0013;
         DE = 0x00D8;
-        HL = 0x014d;
+        HL = 0x014D;
         stackPointer = 0xFFFE;
-        programCounter = 0x100;
+        programCounter = 0x0100;
     }
 
     public void UpdateIme()
@@ -165,7 +165,7 @@ public sealed class Processor
         if (ime)
         {
             Push(programCounter);
-            programCounter = (ushort)(0x40 + 8 * value);
+            programCounter = (ushort)(8 * value + 0x40);
             ime = false;
             Bits.Clear(ref _mmu.InterruptFlag, value);
         }
@@ -174,6 +174,7 @@ public sealed class Processor
     public int Execute()
     {
         var opCode = _mmu.ReadByte(programCounter++);
+
         if (haltBug)
         {
             programCounter--;
@@ -185,7 +186,10 @@ public sealed class Processor
         switch (opCode)
         {
             case 0x00: break;
-            case 0x01: BC = _mmu.ReadWord(programCounter += 2); break;
+            case 0x01:
+                BC = _mmu.ReadWord(programCounter);
+                programCounter += 2;
+                break;
             case 0x02: _mmu.WriteByte(BC, regA); break;
             case 0x03: BC++; break;
             case 0x04: Increment(ref regB); break;
@@ -196,7 +200,10 @@ public sealed class Processor
                 FlagC = (regA & 0x80) != 0;
                 regA = (byte)((regA << 1) | (regA >> 7));
                 break;
-            case 0x08: _mmu.WriteWord(_mmu.ReadWord(programCounter += 2), stackPointer); break;
+            case 0x08:
+                _mmu.WriteWord(_mmu.ReadWord(programCounter), stackPointer);
+                programCounter += 2;
+                break;
             case 0x09: DoubleAdd(BC); break;
             case 0x0A: regA = _mmu.ReadByte(BC); break;
             case 0x0B: BC--; break;
@@ -210,7 +217,10 @@ public sealed class Processor
                 break;
 
             case 0x10: Stop(); break;
-            case 0x11: DE = _mmu.ReadWord(programCounter += 2); break;
+            case 0x11:
+                DE = _mmu.ReadWord(programCounter);
+                programCounter += 2;
+                break;
             case 0x12: _mmu.WriteByte(DE, regA); break;
             case 0x13: DE++; break;
             case 0x14: Increment(ref regD); break;
@@ -241,7 +251,10 @@ public sealed class Processor
                 break;
 
             case 0x20: JumpRelative(!FlagZ); break;
-            case 0x21: HL = _mmu.ReadWord(programCounter += 2); break;
+            case 0x21:
+                HL = _mmu.ReadWord(programCounter);
+                programCounter += 2;
+                break;
             case 0x22: _mmu.WriteByte(HL++, regA); break;
             case 0x23: HL++; break;
             case 0x24: Increment(ref regH); break;
@@ -262,6 +275,8 @@ public sealed class Processor
                     }
                     if (FlagH || (regA & 0x0F) > 0x09) regA += 0x06;
                 }
+                SetFlagZ(regA);
+                FlagH = false;
                 break;
             case 0x28: JumpRelative(FlagZ); break;
             case 0x29: DoubleAdd(HL); break;
@@ -277,7 +292,10 @@ public sealed class Processor
                 break;
 
             case 0x30: JumpRelative(!FlagC); break;
-            case 0x31: stackPointer = _mmu.ReadWord(programCounter += 2); break;
+            case 0x31:
+                stackPointer = _mmu.ReadWord(programCounter);
+                programCounter += 2;
+                break;
             case 0x32: _mmu.WriteByte(HL--, regA); break;
             case 0x33: stackPointer++; break;
             case 0x34:
@@ -471,8 +489,8 @@ public sealed class Processor
 
             case 0xC0: Return(!FlagZ); break;
             case 0xC1: BC = Pop(); break;
-            case 0xC2: Return(!FlagZ); break;
-            case 0xC3: Return(true); break;
+            case 0xC2: Jump(!FlagZ); break;
+            case 0xC3: Jump(true); break;
             case 0xC4: Call(!FlagZ); break;
             case 0xC5: Push(BC); break;
             case 0xC6: Add(_mmu.ReadByte(programCounter++)); break;
@@ -511,7 +529,10 @@ public sealed class Processor
 
             case 0xE8: stackPointer = DoubleAddHL(stackPointer); break;
             case 0xE9: programCounter = HL; break;
-            case 0xEA: _mmu.WriteWord(_mmu.ReadWord(programCounter += 2), regA); break;
+            case 0xEA:
+                _mmu.WriteByte(_mmu.ReadWord(programCounter), regA);
+                programCounter += 2;
+                break;
             case 0xEE: Xor(_mmu.ReadByte(programCounter++)); break;
             case 0xEF: Restart(0x28); break;
 
@@ -526,7 +547,10 @@ public sealed class Processor
 
             case 0xF8: HL = DoubleAddHL(stackPointer); break;
             case 0xF9: stackPointer = HL; break;
-            case 0xFA: regA = _mmu.ReadByte(_mmu.ReadWord(programCounter += 2)); break;
+            case 0xFA:
+                regA = _mmu.ReadByte(_mmu.ReadWord(programCounter));
+                programCounter += 2;
+                break;
             case 0xFB: imeEnabler = true; break;
             case 0xFE: Compare(_mmu.ReadByte(programCounter++)); break;
             case 0xFF: Restart(0x38); break;
@@ -1208,7 +1232,7 @@ public sealed class Processor
         if (flag)
         {
             Push((ushort)(programCounter + 2));
-            programCounter += _mmu.ReadWord(programCounter);
+            programCounter = _mmu.ReadWord(programCounter);
             cycles += CALL_TRUE;
         }
         else
@@ -1259,13 +1283,13 @@ public sealed class Processor
 
     private ushort Pop()
     {
-        var result = _mmu.ReadWord(stackPointer);
+        var word = _mmu.ReadWord(stackPointer);
         stackPointer += 2;
-        return result;
+        return word;
     }
 
     private static void SetFlag(ref byte registry, in byte setBit) => registry |= setBit;
-    private static void UnsetFlag(ref byte registry, in byte unsetBit) => registry &= (byte)~unsetBit;
+    private static void UnsetFlag(ref byte registry, in byte unsetBit) => registry = (byte)(registry & ~unsetBit);
 
     private void SetFlagZ(in int value) => FlagZ = value == 0;
     private void SetFlagC(in int value) => FlagC = value >> 8 != 0;

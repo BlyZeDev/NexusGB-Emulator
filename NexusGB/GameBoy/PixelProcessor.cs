@@ -101,8 +101,9 @@ public sealed class PixelProcessor
 
     private void DrawScanLine()
     {
-        if (Bits.Is(_mmu.LCDControl, 0)) RenderBackground();
-        if (Bits.Is(_mmu.LCDControl, 1)) RenderSprites();
+        var lcdControl = _mmu.LCDControl;
+        if (Bits.Is(lcdControl, 0)) RenderBackground();
+        if (Bits.Is(lcdControl, 1)) RenderSprites();
     }
 
     private void RenderBackground()

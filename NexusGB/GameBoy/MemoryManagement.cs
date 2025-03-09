@@ -1,7 +1,6 @@
 ﻿namespace NexusGB.GameBoy;
 
 using NexusGB.GameBoy.GamePaks;
-using System.Buffers;
 using System.Runtime.CompilerServices;
 
 public sealed class MemoryManagement
@@ -18,7 +17,6 @@ public sealed class MemoryManagement
     public ref byte Divider => ref _io[0x04];
     public ref byte TimerCounter => ref _io[0x05];
     public ref byte TimerModulo => ref _io[0x06];
-    public ref byte TimerControl => ref _io[0x07];
     public bool TimerControlEnabled => (_io[0x07] & 4) != 0;
     public byte TimerControlFrequency => (byte)(_io[0x07] & 3);
 
@@ -91,7 +89,7 @@ public sealed class MemoryManagement
             <= 0xFE9F => _oam[address - 0xFE00],
             <= 0xFEFF => 0x00,
             <= 0xFF7F => _io[address & 0x7F],
-            <= 0xFFFF => _hram[address & 0x7F]
+            _ => _hram[address & 0x7F]
         };
     }
 
