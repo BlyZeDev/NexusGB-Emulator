@@ -39,10 +39,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         Settings.StopGameKey = NexusKey.Escape;
     }
     
-    protected override void Update(NexusInputCollection inputs)
+    protected override void Update()
     {
-        _joypad.HandleInputs(inputs.Keys);
-
         accumulatedTime += DeltaTime * 1_000_000_000;
 
         while (accumulatedTime >= 16740000)
@@ -51,6 +49,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
             while (cyclesThisUpdate < CYCLES_PER_UPDATE)
             {
+                Input.Update();
+                _joypad.HandleInputs(Input.Keys);
+
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;
 
