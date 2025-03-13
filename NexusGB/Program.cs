@@ -12,7 +12,7 @@ sealed class Program
             return;
         }
 
-        using (var emulator = new GameBoyEmulator(@"C:\Users\leons\Downloads\Tetris.gb"))
+        using (var emulator = new GameBoyEmulator(@"C:\Users\leons\Downloads\cputest.gb"))
         {
             emulator.Start();
             emulator.Stop();

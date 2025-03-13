@@ -35,68 +35,67 @@ public sealed class PixelProcessor
         scanlineCounter += cycles;
         var currentMode = (byte)(_mmu.LCDControlStatus & 0x03);
 
-        if (IsLCDEnabled(_mmu.LCDControl))
-        {
-            switch (currentMode)
-            {
-                case 0:
-                    if (scanlineCounter >= HBLANK_CYCLES)
-                    {
-                        _mmu.LCDControlY++;
-                        scanlineCounter -= HBLANK_CYCLES;
-
-                        if (_mmu.LCDControlY == SCREEN_HEIGHT)
-                        {
-                            ChangeSTATMode(1);
-                            _mmu.RequestInterrupt(VBLANK_INTERRUPT);
-                            _graphics.Render();
-                        }
-                        else ChangeSTATMode(2);
-                    }
-                    break;
-                case 1:
-                    if (scanlineCounter >= SCANLINE_CYCLES)
-                    {
-                        _mmu.LCDControlY++;
-                        scanlineCounter -= SCANLINE_CYCLES;
-
-                        if (_mmu.LCDControlY > SCREEN_VBLANK_HEIGHT)
-                        {
-                            ChangeSTATMode(2);
-                            _mmu.LCDControlY = 0;
-                        }
-                    }
-                    break;
-                case 2:
-                    if (scanlineCounter >= OAM_CYCLES)
-                    {
-                        ChangeSTATMode(3);
-                        scanlineCounter -= OAM_CYCLES;
-                    }
-                    break;
-                case 3:
-                    if (scanlineCounter >= VRAM_CYCLES)
-                    {
-                        ChangeSTATMode(0);
-                        DrawScanLine();
-                        scanlineCounter -= VRAM_CYCLES;
-                    }
-                    break;
-            }
-
-            if (_mmu.LCDControlY == _mmu.LYCompare)
-            {
-                Bits.Set(ref _mmu.LCDControlStatus, 2);
-                if (Bits.Is(_mmu.LCDControlStatus, 6)) _mmu.RequestInterrupt(LCD_INTERRUPT);
-            }
-            else Bits.Clear(ref _mmu.LCDControlStatus, 2);
-        }
-        else
+        if (!IsLCDEnabled(_mmu.LCDControl))
         {
             scanlineCounter = 0;
             _mmu.LCDControlY = 0;
             _mmu.LCDControlStatus = (byte)(_mmu.LCDControlStatus & ~0x03);
+            return;
         }
+
+        switch (currentMode)
+        {
+            case 0:
+                if (scanlineCounter >= HBLANK_CYCLES)
+                {
+                    _mmu.LCDControlY++;
+                    scanlineCounter -= HBLANK_CYCLES;
+
+                    if (_mmu.LCDControlY == SCREEN_HEIGHT)
+                    {
+                        ChangeSTATMode(1);
+                        _mmu.RequestInterrupt(VBLANK_INTERRUPT);
+                        _graphics.Render();
+                    }
+                    else ChangeSTATMode(2);
+                }
+                break;
+            case 1:
+                if (scanlineCounter >= SCANLINE_CYCLES)
+                {
+                    _mmu.LCDControlY++;
+                    scanlineCounter -= SCANLINE_CYCLES;
+
+                    if (_mmu.LCDControlY > SCREEN_VBLANK_HEIGHT)
+                    {
+                        ChangeSTATMode(2);
+                        _mmu.LCDControlY = 0;
+                    }
+                }
+                break;
+            case 2:
+                if (scanlineCounter >= OAM_CYCLES)
+                {
+                    ChangeSTATMode(3);
+                    scanlineCounter -= OAM_CYCLES;
+                }
+                break;
+            case 3:
+                if (scanlineCounter >= VRAM_CYCLES)
+                {
+                    ChangeSTATMode(0);
+                    DrawScanLine();
+                    scanlineCounter -= VRAM_CYCLES;
+                }
+                break;
+        }
+
+        if (_mmu.LCDControlY == _mmu.LYCompare)
+        {
+            Bits.Set(ref _mmu.LCDControlStatus, 2);
+            if (Bits.Is(_mmu.LCDControlStatus, 6)) _mmu.RequestInterrupt(LCD_INTERRUPT);
+        }
+        else Bits.Clear(ref _mmu.LCDControlStatus, 2);
     }
 
     private void DrawScanLine()
@@ -186,7 +185,7 @@ public sealed class PixelProcessor
 
     private void ChangeSTATMode(in int mode)
     {
-        var stat = (byte)(_mmu.LCDControlStatus & ~0x3);
+        var stat = (byte)(_mmu.LCDControlStatus & ~0x03);
         _mmu.LCDControlStatus = (byte)(stat | mode);
 
         if (mode == 0 && Bits.Is(stat, 3) || mode == 1 && Bits.Is(stat, 4) || mode == 2 && Bits.Is(stat, 5))
@@ -230,8 +229,8 @@ public sealed class PixelProcessor
     private static bool IsYFlipped(in byte attribute) => Bits.Is(attribute, 6);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsTransparent(in int b) => b == 0;
+    private static bool IsTransparent(in int bit) => bit == 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsAboveBackground(in byte attr) => attr >> 7 == 0;
+    private static bool IsAboveBackground(in byte attribute) => attribute >> 7 == 0;
 }

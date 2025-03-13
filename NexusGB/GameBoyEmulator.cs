@@ -47,10 +47,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         {
             accumulatedTime -= 16740000;
 
+            Input.UpdateGamepads();
+
             while (cyclesThisUpdate < CYCLES_PER_UPDATE)
             {
-                Input.Update();
-                _joypad.HandleInputs(Input.Keys);
+                _joypad.HandleInputs(Input.Gamepad1);
 
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;

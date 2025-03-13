@@ -61,6 +61,12 @@ public sealed class Processor
 
     private readonly MemoryManagement _mmu;
 
+    private bool ime;
+    private bool imeEnabler;
+    private bool halted;
+    private bool haltBug;
+    private int cycles;
+
     private ushort programCounter;
     private ushort stackPointer;
 
@@ -109,32 +115,26 @@ public sealed class Processor
     private bool FlagZ
     {
         get => (regF & 0x80) != 0;
-        set => regF = value ? (byte)(regF | 0x80) : (byte)(regF & ~0x80);
+        set => regF = (byte)(value ? regF | 0x80 : regF & ~0x80);
     }
 
     private bool FlagN
     {
         get => (regF & 0x40) != 0;
-        set => regF = value ? (byte)(regF | 0x40) : (byte)(regF & ~0x40);
+        set => regF = (byte)(value ? regF | 0x40 : regF & ~0x40);
     }
 
     private bool FlagH
     {
         get => (regF & 0x20) != 0;
-        set => regF = value ? (byte)(regF | 0x20) : (byte)(regF & ~0x20);
+        set => regF = (byte)(value ? regF | 0x20 : regF & ~0x20);
     }
 
     private bool FlagC
     {
         get => (regF & 0x10) != 0;
-        set => regF = value ? (byte)(regF | 0x10) : (byte)(regF & ~0x10);
+        set => regF = (byte)(value ? regF | 0x10 : regF & ~0x10);
     }
-
-    private bool ime;
-    private bool imeEnabler;
-    private bool halted;
-    private bool haltBug;
-    private int cycles;
 
     public Processor(MemoryManagement mmu)
     {
@@ -165,7 +165,7 @@ public sealed class Processor
         if (ime)
         {
             Push(programCounter);
-            programCounter = (ushort)(8 * value + 0x40);
+            programCounter = (ushort)(value * 8 + 0x40);
             ime = false;
             Bits.Clear(ref _mmu.InterruptFlag, value);
         }
@@ -493,16 +493,25 @@ public sealed class Processor
             case 0xC3: Jump(true); break;
             case 0xC4: Call(!FlagZ); break;
             case 0xC5: Push(BC); break;
-            case 0xC6: Add(_mmu.ReadByte(programCounter++)); break;
+            case 0xC6:
+                Add(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xC7: Restart(0x00); break;
 
             case 0xC8: Return(FlagZ); break;
             case 0xC9: Return(true); break;
             case 0xCA: Jump(FlagZ); break;
-            case 0xCB: PrefixCB(_mmu.ReadByte(programCounter++)); break;
+            case 0xCB:
+                PrefixCB(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xCC: Call(FlagZ); break;
             case 0xCD: Call(true); break;
-            case 0xCE: AddCarry(_mmu.ReadByte(programCounter++)); break;
+            case 0xCE:
+                AddCarry(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xCF: Restart(0x08); break;
 
             case 0xD0: Return(!FlagC); break;
@@ -510,21 +519,33 @@ public sealed class Processor
             case 0xD2: Jump(!FlagC); break;
             case 0xD4: Call(!FlagC); break;
             case 0xD5: Push(DE); break;
-            case 0xD6: Subtract(_mmu.ReadByte(programCounter++)); break;
+            case 0xD6:
+                Subtract(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xD7: Restart(0x10); break;
 
             case 0xD8: Return(FlagC); break;
             case 0xD9: Return(true); ime = true; break;
             case 0xDA: Jump(FlagC); break;
             case 0xDC: Call(FlagC); break;
-            case 0xDE: SubtractCarry(_mmu.ReadByte(programCounter++)); break;
+            case 0xDE:
+                SubtractCarry(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xDF: Restart(0x18); break;
 
-            case 0xE0: _mmu.WriteByte((ushort)(0xFF00 + _mmu.ReadByte(programCounter++)), regA); break;
+            case 0xE0:
+                _mmu.WriteByte((ushort)(0xFF00 + _mmu.ReadByte(programCounter)), regA);
+                programCounter++;
+                break;
             case 0xE1: HL = Pop(); break;
             case 0xE2: _mmu.WriteByte((ushort)(0xFF00 + regC), regA); break;
             case 0xE5: Push(HL); break;
-            case 0xE6: And(_mmu.ReadByte(programCounter++)); break;
+            case 0xE6:
+                And(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xE7: Restart(0x20); break;
 
             case 0xE8: stackPointer = DoubleAddHL(stackPointer); break;
@@ -533,16 +554,25 @@ public sealed class Processor
                 _mmu.WriteByte(_mmu.ReadWord(programCounter), regA);
                 programCounter += 2;
                 break;
-            case 0xEE: Xor(_mmu.ReadByte(programCounter++)); break;
+            case 0xEE:
+                Xor(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xEF: Restart(0x28); break;
 
-            case 0xF0: regA = _mmu.ReadByte((ushort)(0xFF00 + _mmu.ReadByte(programCounter++))); break;
+            case 0xF0:
+                regA = _mmu.ReadByte((ushort)(0xFF00 + _mmu.ReadByte(programCounter)));
+                programCounter++;
+                break;
             case 0xF1: AF = Pop(); break;
             case 0xF2: regA = _mmu.ReadByte((ushort)(0xFF00 + regC)); break;
             case 0xF3: ime = false; break;
             case 0xF4: break;
             case 0xF5: Push(AF); break;
-            case 0xF6: Or(_mmu.ReadByte(programCounter++)); break;
+            case 0xF6:
+                Or(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xF7: Restart(0x30); break;
 
             case 0xF8: HL = DoubleAddHL(stackPointer); break;
@@ -552,7 +582,10 @@ public sealed class Processor
                 programCounter += 2;
                 break;
             case 0xFB: imeEnabler = true; break;
-            case 0xFE: Compare(_mmu.ReadByte(programCounter++)); break;
+            case 0xFE:
+                Compare(_mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0xFF: Restart(0x38); break;
 
             //default: UnsupportedOpCode(opCode); break;
@@ -1264,15 +1297,14 @@ public sealed class Processor
 
     private void Halt()
     {
-        if (!ime)
+        if (ime) return;
+
+        if ((_mmu.InterruptEnable & _mmu.InterruptFlag & 0x1F) == 0)
         {
-            if ((_mmu.InterruptEnable & _mmu.InterruptFlag & 0x1F) == 0)
-            {
-                halted = true;
-                programCounter--;
-            }
-            else haltBug = true;
+            halted = true;
+            programCounter--;
         }
+        else haltBug = true;
     }
 
     private void Push(in ushort word)
