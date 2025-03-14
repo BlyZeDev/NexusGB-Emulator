@@ -3,7 +3,6 @@
 using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
-using Microsoft.VisualBasic;
 using NexusGB.GameBoy;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
@@ -48,11 +47,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             accumulatedTime -= 16740000;
 
             Input.UpdateGamepads();
+            Input.Update();
+            _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
             while (cyclesThisUpdate < CYCLES_PER_UPDATE)
             {
-                _joypad.HandleInputs(Input.Gamepad1);
-
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;
 

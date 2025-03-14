@@ -140,10 +140,14 @@ public sealed class Processor
     {
         _mmu = mmu;
 
-        AF = 0x01B0;
-        BC = 0x0013;
-        DE = 0x00D8;
-        HL = 0x014D;
+        regA = 0x01;
+        regB = 0x00;
+        regC = 0x13;
+        regD = 0x00;
+        regE = 0xD8;
+        regF = 0xB0;
+        regH = 0x01;
+        regL = 0x4D;
         stackPointer = 0xFFFE;
         programCounter = 0x0100;
     }
@@ -194,7 +198,10 @@ public sealed class Processor
             case 0x03: BC++; break;
             case 0x04: Increment(ref regB); break;
             case 0x05: Decrement(ref regB); break;
-            case 0x06: regB = _mmu.ReadByte(programCounter++); break;
+            case 0x06:
+                regB = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x07:
                 regF = 0;
                 FlagC = (regA & 0x80) != 0;
@@ -209,7 +216,10 @@ public sealed class Processor
             case 0x0B: BC--; break;
             case 0x0C: Increment(ref regC); break;
             case 0x0D: Decrement(ref regC); break;
-            case 0x0E: regC = _mmu.ReadByte(programCounter++); break;
+            case 0x0E:
+                regC = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x0F:
                 regF = 0;
                 FlagC = (regA & 0x01) != 0;
@@ -225,7 +235,10 @@ public sealed class Processor
             case 0x13: DE++; break;
             case 0x14: Increment(ref regD); break;
             case 0x15: Decrement(ref regD); break;
-            case 0x16: regD = _mmu.ReadByte(programCounter++); break;
+            case 0x16:
+                regD = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x17:
                 {
                     var prevC = FlagC ? 1 : 0;
@@ -240,7 +253,10 @@ public sealed class Processor
             case 0x1B: DE--; break;
             case 0x1C: Increment(ref regE); break;
             case 0x1D: Decrement(ref regE); break;
-            case 0x1E: regE = _mmu.ReadByte(programCounter++); break;
+            case 0x1E:
+                regE = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x1F:
                 {
                     var prevC = FlagC ? 0x80 : 0x00;
@@ -259,7 +275,10 @@ public sealed class Processor
             case 0x23: HL++; break;
             case 0x24: Increment(ref regH); break;
             case 0x25: Decrement(ref regH); break;
-            case 0x26: regH = _mmu.ReadByte(programCounter++); break;
+            case 0x26:
+                regH = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x27:
                 if (FlagN)
                 {
@@ -284,7 +303,10 @@ public sealed class Processor
             case 0x2B: HL--; break;
             case 0x2C: Increment(ref regL); break;
             case 0x2D: Decrement(ref regL); break;
-            case 0x2E: regL = _mmu.ReadByte(programCounter++); break;
+            case 0x2E:
+                regL = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x2F:
                 regA = (byte)~regA;
                 FlagN = true;
@@ -312,7 +334,10 @@ public sealed class Processor
                     _mmu.WriteByte(HL, read);
                 }
                 break;
-            case 0x36: _mmu.WriteByte(HL, _mmu.ReadByte(programCounter++)); break;
+            case 0x36:
+                _mmu.WriteByte(HL, _mmu.ReadByte(programCounter));
+                programCounter++;
+                break;
             case 0x37:
                 FlagC = true;
                 FlagN = false;
@@ -324,7 +349,10 @@ public sealed class Processor
             case 0x3B: stackPointer--; break;
             case 0x3C: Increment(ref regA); break;
             case 0x3D: Decrement(ref regA); break;
-            case 0x3E: regA = _mmu.ReadByte(programCounter++);break;
+            case 0x3E:
+                regA = _mmu.ReadByte(programCounter);
+                programCounter++;
+                break;
             case 0x3F:
                 FlagC = !FlagC;
                 FlagN = false;
@@ -502,10 +530,7 @@ public sealed class Processor
             case 0xC8: Return(FlagZ); break;
             case 0xC9: Return(true); break;
             case 0xCA: Jump(FlagZ); break;
-            case 0xCB:
-                PrefixCB(_mmu.ReadByte(programCounter));
-                programCounter++;
-                break;
+            case 0xCB: PrefixCB(_mmu.ReadByte(programCounter++)); break;
             case 0xCC: Call(FlagZ); break;
             case 0xCD: Call(true); break;
             case 0xCE:
@@ -1041,86 +1066,93 @@ public sealed class Processor
         FlagH = true;
     }
 
-    private void ShiftRightLog(ref byte bit)
+    private void ShiftRightLog(ref byte value)
     {
-        bit = (byte)(bit >> 1);
-        SetFlagZ(bit);
+        var result = (byte)(value >> 1);
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x01) != 0;
+        FlagC = (value & 0x01) != 0;
+        value = result;
     }
 
-    private void Swap(ref byte bit)
+    private void Swap(ref byte value)
     {
-        bit = (byte)((bit & 0xF0) >> 4 | (bit & 0x0F) << 4);
-        SetFlagZ(bit);
+        value = (byte)((value & 0xF0) >> 4 | (value & 0x0F) << 4);
+        SetFlagZ(value);
         FlagN = false;
         FlagH = false;
         FlagC = false;
     }
 
-    private void ShiftRightAr(ref byte bit)
+    private void ShiftRightAr(ref byte value)
     {
-        bit = (byte)((bit >> 1) | (bit & 0x80));
-        SetFlagZ(bit);
+        var result = (byte)((value >> 1) | (value & 0x80));
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x01) != 0;
+        FlagC = (value & 0x01) != 0;
+        value = result;
     }
 
-    private void ShiftLeftAr(ref byte bit)
+    private void ShiftLeftAr(ref byte value)
     {
-        bit = (byte)(bit << 1);
-        SetFlagZ(bit);
+        var result = (byte)(value << 1);
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x80) != 0;
+        FlagC = (value & 0x80) != 0;
+        value = result;
     }
 
-    private void RotateRight(ref byte bit)
+    private void RotateRight(ref byte value)
     {
-        bit = (byte)((bit >> 1) | (FlagC ? 0x80 : 0x00));
-        SetFlagZ(bit);
+        var result = (byte)((value >> 1) | (FlagC ? 0x80 : 0x00));
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x01) != 0;
+        FlagC = (value & 0x01) != 0;
+        value = result;
     }
 
-    private void RotateLeft(ref byte bit)
+    private void RotateLeft(ref byte value)
     {
-        bit = (byte)((bit << 1) | (FlagC ? 0x01 : 0x00));
-        SetFlagZ(bit);
+        var result = (byte)((value << 1) | (FlagC ? 0x01 : 0x00));
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x80) != 0;
+        FlagC = (value & 0x80) != 0;
+        value = result;
     }
 
-    private void RotateRightCarry(ref byte bit)
+    private void RotateRightCarry(ref byte value)
     {
-        bit = (byte)((bit >> 1) | (bit << 7));
-        SetFlagZ(bit);
+        var result = (byte)((value >> 1) | (value << 7));
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x01) != 0;
+        FlagC = (value & 0x01) != 0;
+        value = result;
     }
 
-    private void RotateLeftCarry(ref byte bit)
+    private void RotateLeftCarry(ref byte value)
     {
-        bit = (byte)((bit << 1) | (bit >> 7));
-        SetFlagZ(bit);
+        var result = (byte)((value << 1) | (value >> 7));
+        SetFlagZ(result);
         FlagN = false;
         FlagH = false;
-        FlagC = (bit & 0x80) != 0;
+        FlagC = (value & 0x80) != 0;
+        value = result;
     }
 
-    private ushort DoubleAddHL(in ushort registry)
+    private ushort DoubleAddHL(in ushort word)
     {
         var value = _mmu.ReadByte(programCounter++);
         FlagZ = false;
         FlagN = false;
-        SetFlagH((byte)registry, value);
-        SetFlagC((byte)registry + value);
-        return (ushort)(registry + (sbyte)value);
+        SetFlagH((byte)word, value);
+        SetFlagC((byte)word + value);
+        return (ushort)(word + (sbyte)value);
     }
 
     private void JumpRelative(in bool flag)
@@ -1138,73 +1170,73 @@ public sealed class Processor
 
     private void Stop() { }
 
-    private void Increment(ref byte bit)
+    private void Increment(ref byte value)
     {
-        var result = bit + 1;
+        var result = value + 1;
         SetFlagZ(result);
         FlagN = false;
-        SetFlagH(bit, 1);
-        bit = (byte)result;
+        SetFlagH(value, 1);
+        value = (byte)result;
     }
 
-    private void Decrement(ref byte bit)
+    private void Decrement(ref byte value)
     {
-        var result = bit - 1;
+        var result = value - 1;
         SetFlagZ(result);
         FlagN = true;
-        SetFlagHSub(bit, 1);
-        bit = (byte)result;
+        SetFlagHSub(value, 1);
+        value = (byte)result;
     }
 
-    private void Add(in byte bit)
+    private void Add(in byte value)
     {
-        var result = regA + bit;
+        var result = regA + value;
         SetFlagZ(result);
         FlagN = false;
-        SetFlagH(regA, bit);
+        SetFlagH(regA, value);
         SetFlagC(result);
         regA = (byte)result;
     }
 
-    private void AddCarry(in byte bit)
+    private void AddCarry(in byte value)
     {
-        var result = regA + bit + (FlagC ? 1 : 0);
+        var result = regA + value + (FlagC ? 1 : 0);
         SetFlagZ(result);
         FlagN = false;
 
-        if (FlagC) SetFlagHCarry(regA, bit);
-        else SetFlagH(regA, bit);
+        if (FlagC) SetFlagHCarry(regA, value);
+        else SetFlagH(regA, value);
 
         SetFlagC(result);
         regA = (byte)result;
     }
 
-    private void Subtract(in byte bit)
+    private void Subtract(in byte value)
     {
-        var result = regA - bit;
+        var result = regA - value;
         SetFlagZ(result);
         FlagN = true;
-        SetFlagHSub(regA, bit);
+        SetFlagHSub(regA, value);
         SetFlagC(result);
         regA = (byte)result;
     }
 
-    private void SubtractCarry(in byte bit)
+    private void SubtractCarry(in byte value)
     {
-        var result = regA - bit - (FlagC ? 1 : 0);
+        var result = regA - value - (FlagC ? 1 : 0);
         SetFlagZ(result);
         FlagN = true;
 
-        if (FlagC) SetFlagHSubCarry(regA, bit);
-        else SetFlagHSub(regA, bit);
+        if (FlagC) SetFlagHSubCarry(regA, value);
+        else SetFlagHSub(regA, value);
 
         SetFlagC(result);
         regA = (byte)result;
     }
 
-    private void And(in byte bit)
+    private void And(in byte value)
     {
-        var result = (byte)(regA & bit);
+        var result = (byte)(regA & value);
         SetFlagZ(result);
         FlagN = false;
         FlagH = true;
@@ -1212,9 +1244,9 @@ public sealed class Processor
         regA = result;
     }
 
-    private void Xor(in byte bit)
+    private void Xor(in byte value)
     {
-        var result = (byte)(regA ^ bit);
+        var result = (byte)(regA ^ value);
         SetFlagZ(result);
         FlagN = false;
         FlagH = false;
@@ -1222,9 +1254,9 @@ public sealed class Processor
         regA = result;
     }
 
-    private void Or(in byte bit)
+    private void Or(in byte value)
     {
-        var result = (byte)(regA | bit);
+        var result = (byte)(regA | value);
         SetFlagZ(result);
         FlagN = false;
         FlagH = false;
@@ -1232,20 +1264,20 @@ public sealed class Processor
         regA = result;
     }
 
-    private void Compare(in byte bit)
+    private void Compare(in byte value)
     {
-        var result = regA - bit;
+        var result = regA - value;
         SetFlagZ(result);
         FlagN = true;
-        SetFlagHSub(regA, bit);
+        SetFlagHSub(regA, value);
         SetFlagC(result);
     }
 
-    private void DoubleAdd(in ushort registry)
+    private void DoubleAdd(in ushort word)
     {
-        var result = HL + registry;
+        var result = HL + word;
         FlagN = false;
-        SetFlagH(HL, registry);
+        SetFlagH(HL, word);
         FlagC = result >> 16 != 0;
         HL = (ushort)result;
     }
@@ -1289,10 +1321,10 @@ public sealed class Processor
         }
     }
 
-    private void Restart(in byte bit)
+    private void Restart(in byte value)
     {
         Push(programCounter);
-        programCounter = bit;
+        programCounter = value;
     }
 
     private void Halt()
@@ -1323,13 +1355,11 @@ public sealed class Processor
     private static void SetFlag(ref byte registry, in byte setBit) => registry |= setBit;
     private static void UnsetFlag(ref byte registry, in byte unsetBit) => registry = (byte)(registry & ~unsetBit);
 
-    private void SetFlagZ(in int value) => FlagZ = value == 0;
+    private void SetFlagZ(in int value) => FlagZ = (value & 0xFF) == 0;
     private void SetFlagC(in int value) => FlagC = value >> 8 != 0;
-    private void SetFlagH(in byte bit1, in byte bit2) => FlagH = (bit1 & 0x0F) + (bit2 & 0x0F) > 0x0F;
-    private void SetFlagH(in ushort registry1, in ushort registry2) => FlagH = (registry1 & 0x0FFF) + (registry2 & 0x0FFF) > 0x0FFF;
+    private void SetFlagH(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) + (byte2 & 0x0F) > 0x0F;
+    private void SetFlagH(in ushort word1, in ushort word2) => FlagH = (word1 & 0x0FFF) + (word2 & 0x0FFF) > 0x0FFF;
     private void SetFlagHCarry(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) + (byte2 & 0x0F) >= 0x0F;
     private void SetFlagHSub(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) < (byte2 & 0x0F);
     private void SetFlagHSubCarry(in byte byte1, in byte byte2) => FlagH = (byte1 & 0x0F) < (byte2 & 0x0F) + (FlagC ? 1 : 0);
-
-    //private void UnsupportedOpCode(in byte opCode) => throw new NotSupportedException($"{programCounter - 1:X4} Unsupported Operation Code {opCode:X2}");
 }

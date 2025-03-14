@@ -21,7 +21,7 @@ public sealed class MemoryManagement
     public byte TimerControlFrequency => (byte)(_io[0x07] & 3);
 
     public ref byte InterruptEnable => ref _hram[0x7F];
-    public ref byte InterruptFlag => ref _hram[0x0F];
+    public ref byte InterruptFlag => ref _io[0x0F];
 
     public byte LCDControl => _io[0x40];
     public ref byte LCDControlStatus => ref _io[0x41];
@@ -97,40 +97,23 @@ public sealed class MemoryManagement
     {
         switch (address)
         {
-            case <= 0x7FFF:
-                _gamepak.WriteROM(address, value);
-                break;
+            case <= 0x7FFF: _gamepak.WriteROM(address, value); break;
 
-            case <= 0x9FFF:
-                _vram[address & 0x1FFF] = value;
-                break;
+            case <= 0x9FFF: _vram[address & 0x1FFF] = value; break;
 
-            case <= 0xBFFF:
-                _gamepak.WriteERAM(address, value);
-                break;
+            case <= 0xBFFF: _gamepak.WriteERAM(address, value); break;
 
-            case <= 0xCFFF:
-                _wram0[address & 0xFFF] = value;
-                break;
+            case <= 0xCFFF: _wram0[address & 0xFFF] = value; break;
 
-            case <= 0xDFFF:
-                _wram1[address & 0xFFF] = value;
-                break;
+            case <= 0xDFFF: _wram1[address & 0xFFF] = value; break;
 
-            case <= 0xEFFF:
-                _wram0[address & 0xFFF] = value;
-                break;
+            case <= 0xEFFF: _wram0[address & 0xFFF] = value; break;
 
-            case <= 0xFDFF:
-                _wram1[address & 0xFFF] = value;
-                break;
+            case <= 0xFDFF: _wram1[address & 0xFFF] = value; break;
 
-            case <= 0xFE9F:
-                _oam[address & 0x9F] = value;
-                break;
+            case <= 0xFE9F: _oam[address & 0x9F] = value; break;
 
-            case <= 0xFEFF:
-                break;
+            case <= 0xFEFF: break;
 
             case <= 0xFF7F:
                 _io[address & 0x7F] = (byte)(address switch
@@ -142,9 +125,7 @@ public sealed class MemoryManagement
                 });
                 break;
 
-            case <= 0xFFFF:
-                _hram[address & 0x7F] = value;
-                break;
+            default: _hram[address & 0x7F] = value; break;
         }
     }
 
@@ -167,6 +148,7 @@ public sealed class MemoryManagement
     private byte DirectMemoryAccess(in byte value)
     {
         var address = (ushort)(value << 8);
+
         for (byte i = 0; i < _oam.Length; i++)
         {
             _oam[i] = ReadByte((ushort)(address + i));
