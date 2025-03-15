@@ -22,27 +22,25 @@ public sealed class MemoryController3 : IGamePak
     {
         _rom = rom;
 
-        _eram = new byte[8192];
+        _eram = new byte[32_768];
 
         romBank = 1;
     }
 
     public byte ReadERAM(in ushort address)
     {
-        if (eramEnabled)
+        if (!eramEnabled) return 0xFF;
+
+        return ramBank switch
         {
-            return ramBank switch
-            {
-                <= 0x03 => _eram[ERAM_OFFSET * ramBank + (address & 0x1FFF)],
-                0x08 => secondsRTC,
-                0x09 => minutesRTC,
-                0x0A => hoursRTC,
-                0x0B => dayCounterLowRTC,
-                0x0C => dayCounterHighRTC,
-                _ => 0xFF,
-            };
-        }
-        else return 0xFF;
+            <= 0x03 => _eram[ERAM_OFFSET * ramBank + (address & 0x1FFF)],
+            0x08 => secondsRTC,
+            0x09 => minutesRTC,
+            0x0A => hoursRTC,
+            0x0B => dayCounterLowRTC,
+            0x0C => dayCounterHighRTC,
+            _ => 0xFF,
+        };
     }
 
     public byte ReadHighROM(in ushort address) => _rom[ROM_OFFSET * romBank + (address & 0x3FFF)];

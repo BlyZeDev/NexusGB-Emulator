@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 public sealed class MemoryManagement
 {
     private readonly IGamePak _gamepak;
+    private readonly SoundProcessor _sound;
 
     private readonly byte[] _vram;
     private readonly byte[] _wram0;
@@ -40,9 +41,10 @@ public sealed class MemoryManagement
 
     public ref byte JoystickPad => ref _io[0x00];
 
-    private MemoryManagement(IGamePak gamepak)
+    private MemoryManagement(IGamePak gamepak, SoundProcessor sound)
     {
         _gamepak = gamepak;
+        _sound = sound;
 
         _vram = new byte[8192];
         _wram0 = new byte[4096];
@@ -157,7 +159,7 @@ public sealed class MemoryManagement
         return value;
     }
 
-    public static MemoryManagement LoadGamePak(string filepath)
+    public static MemoryManagement LoadGamePak(string filepath, SoundProcessor sound)
     {
         var rom = File.ReadAllBytes(filepath);
 
@@ -169,6 +171,6 @@ public sealed class MemoryManagement
             0x0F or 0x10 or 0x11 or 0x12 or 0x13 => new MemoryController3(rom),
             0x19 or 0x1A or 0x1B => new MemoryController5(rom),
             _ => throw new NotSupportedException($"MBC not supported: {rom[0x147]:X2}")
-        });
+        }, sound);
     }
 }

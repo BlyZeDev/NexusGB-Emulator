@@ -7,11 +7,8 @@ using NexusGB.GameBoy;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
-    private const int DMG_4Mhz = 4194304;
-    private const float REFRESH_RATE = 59.7275f;
-    private const int CYCLES_PER_UPDATE = (int)(DMG_4Mhz / REFRESH_RATE);
-
     private readonly Processor _cpu;
+    private readonly SoundProcessor _spu;
     private readonly MemoryManagement _mmu;
     private readonly PixelProcessor _ppu;
     private readonly Timer _timer;
@@ -23,7 +20,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     public GameBoyEmulator(string rom)
     {
-        _mmu = MemoryManagement.LoadGamePak(rom);
+        _spu = new SoundProcessor();
+        _mmu = MemoryManagement.LoadGamePak(rom, _spu);
         _cpu = new Processor(_mmu);
         _ppu = new PixelProcessor(Graphic, _mmu);
         _timer = new Timer(_mmu);
@@ -50,18 +48,19 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             Input.Update();
             _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
-            while (cyclesThisUpdate < CYCLES_PER_UPDATE)
+            while (cyclesThisUpdate < Hardware.CYCLES_PER_UPDATE)
             {
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;
 
                 _timer.Update(cpuCycles);
                 _ppu.Update(cpuCycles);
+                _spu.Update(cpuCycles);
                 _joypad.Update();
                 HandleInterrupts();
             }
 
-            cyclesThisUpdate -= CYCLES_PER_UPDATE;
+            cyclesThisUpdate -= Hardware.CYCLES_PER_UPDATE;
         }
     }
 
