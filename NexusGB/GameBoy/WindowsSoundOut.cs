@@ -1,45 +1,34 @@
 ﻿namespace NexusGB.GameBoy;
 
 using NAudio.Wave;
+using System.Runtime.InteropServices;
 
-public sealed class WindowsSoundOut : BufferedWaveProvider
+public sealed class WindowsSoundOut
 {
-    private static readonly byte[] _buffer = new byte[sizeof(float)];
-
     private readonly DirectSoundOut soundOut;
+    private readonly BufferedWaveProvider _provider;
     private readonly byte[] _addSampleData;
 
-    public WindowsSoundOut() : base(WaveFormat.CreateIeeeFloatWaveFormat(44100, 2))
+    public int SampleRate => _provider.WaveFormat.SampleRate;
+
+    public WindowsSoundOut()
     {
-        soundOut = new DirectSoundOut();
-        soundOut.Init(this);
+        _provider = new BufferedWaveProvider(new WaveFormat(44100, 16, 2));
+        soundOut = new DirectSoundOut(100);
+        soundOut.Init(_provider);
         soundOut.Play();
 
-        _addSampleData = new byte[BufferLength];
+        _addSampleData = new byte[_provider.BufferLength];
     }
 
-    public void BufferSoundSamples(in Span<float> sampleData, in int offset, in int length)
+    public void BufferSoundSamples(in Span<float> sampleData, in int length)
     {
-        var finalLength = offset + length;
-        for (int i = 0, j = 0; j < finalLength; j++)
+        var index = 0;
+        foreach (var current in MemoryMarshal.Cast<float, byte>(sampleData))
         {
-            GetBytes(sampleData[j], _buffer);
-            foreach (var current in _buffer)
-            {
-                _addSampleData[i++] = current;
-            }
+            _addSampleData[index++] = current;
         }
 
-        AddSamples(_addSampleData, 0, length * sizeof(float));
-    }
-
-    private unsafe static void GetBytes(float floatValue, byte[] bytes)
-    {
-        var value = *(int*)&floatValue;
-
-        fixed (byte* b = bytes)
-        {
-            *(int*)b = value;
-        }
+        _provider.AddSamples(_addSampleData, 0, length + sizeof(float));
     }
 }

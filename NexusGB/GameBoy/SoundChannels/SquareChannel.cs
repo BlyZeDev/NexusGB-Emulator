@@ -22,8 +22,8 @@ public class SquareChannel : BaseSoundChannel
 
     protected float Frequency
     {
-        get => (float)(GameBoy.ClockFrequency / (32 * (2048 - FrequencyRegister)));
-        set => FrequencyRegister = (int)(2048 - GameBoy.ClockFrequency / (32 * value));
+        get => (float)(GameBoySystem.ClockFrequency / (32 * (2048 - FrequencyRegister)));
+        set => FrequencyRegister = (int)(2048 - GameBoySystem.ClockFrequency / (32 * value));
     }
 
     public SquareChannel(SoundProcessor spu) : this(spu, 2) { }
@@ -35,9 +35,9 @@ public class SquareChannel : BaseSoundChannel
     {
         _volume.Update(cycles);
         var amplitude = ChannelVolume * (_volume.Volume / 15d);
-        var delta = cycles / GameBoy.ClockFrequency;
+        var delta = cycles / GameBoySystem.ClockFrequency;
 
-        var sampleRate = _out.WaveFormat.SampleRate;
+        var sampleRate = _out.SampleRate;
         var sampleCount = (int)Math.Ceiling(delta * sampleRate) * 2;
         using (var memory = MemoryPool<float>.Shared.Rent(sampleCount))
         {
@@ -56,7 +56,7 @@ public class SquareChannel : BaseSoundChannel
                 if (UseSoundLength) length -= delta;
             }
 
-            _out.BufferSoundSamples(buffer, 0, sampleCount);
+            _out.BufferSoundSamples(buffer, sampleCount);
         }
     }
 
@@ -67,13 +67,14 @@ public class SquareChannel : BaseSoundChannel
     {
         switch (index)
         {
+            case 0: base.WriteNumber(index, value); break;
             case 1:
-                length = SoundLength;
                 base.WriteNumber(index, value);
+                length = SoundLength;
                 break;
             case 2:
-                _volume.Reset();
                 base.WriteNumber(index, value);
+                _volume.Reset();
                 break;
             case 3: FrequencyRegister = (FrequencyRegister & ~0xFF) | value; break;
             case 4:

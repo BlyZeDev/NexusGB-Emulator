@@ -13,7 +13,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private readonly PixelProcessor _ppu;
     private readonly Timer _timer;
     private readonly Joypad _joypad;
-    
 
     private double accumulatedTime;
     private int cpuCycles;
@@ -49,7 +48,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             Input.Update();
             _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
-            while (cyclesThisUpdate < GameBoy.GameBoy.CYCLES_PER_UPDATE)
+            while (cyclesThisUpdate < GameBoySystem.CyclesPerUpdate)
             {
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;
@@ -61,7 +60,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
                 HandleInterrupts();
             }
 
-            cyclesThisUpdate -= GameBoy.GameBoy.CYCLES_PER_UPDATE;
+            cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
     }
 

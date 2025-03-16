@@ -18,7 +18,7 @@ public abstract class BaseSoundChannel
         _spu = spu;
         _out = new WindowsSoundOut();
 
-        ChannelVolume = 1;
+        ChannelVolume = 0.05f;
     }
 
     public abstract void Update(in int cycles);

@@ -10,16 +10,16 @@ public sealed class WaveSoundChannel : BaseSoundChannel
     private int coordinate;
     private bool top;
 
-    private int Frequency => (int)(GameBoy.ClockFrequency / (64 * (2048 - (ReadNumber(3) | (ReadNumber(4) & 0b111) << 8))));
+    private int Frequency => (int)(GameBoySystem.ClockFrequency / (64 * (2048 - (ReadNumber(3) | (ReadNumber(4) & 0b111) << 8))));
 
     public WaveSoundChannel(SoundProcessor spu)
         : base(spu, 3) => _ram = new byte[16];
 
     public override void Update(in int cycles)
     {
-        var delta = cycles / GameBoy.ClockFrequency;
+        var delta = cycles / GameBoySystem.ClockFrequency;
 
-        var sampleRate = _out.WaveFormat.SampleRate;
+        var sampleRate = _out.SampleRate;
         var sampleCount = (int)Math.Ceiling(delta * sampleRate) * 2;
 
         using (var memory = MemoryPool<float>.Shared.Rent(sampleCount))
@@ -46,7 +46,7 @@ public sealed class WaveSoundChannel : BaseSoundChannel
                 }
             }
 
-            _out.BufferSoundSamples(buffer, 0, sampleCount);
+            _out.BufferSoundSamples(buffer, sampleCount);
         }
     }
 

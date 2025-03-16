@@ -13,7 +13,7 @@ public sealed class NoiseChannel : BaseSoundChannel
     private bool UseSoundLength => (ReadNumber(4) & (1 << 6)) != 0;
     private double SoundLength => (64 - (ReadNumber(1) & 0b111111)) * (1 / 256f);
     private int DividingRatio => ReadNumber(3) & 0b111;
-    private float Frequency => (float)(GameBoy.ClockFrequency / 8 / (DividingRatio == 0 ? 0.5 : DividingRatio) / Math.Pow(2, (ReadNumber(3) >> 4) + 1));
+    private float Frequency => (float)(GameBoySystem.ClockFrequency / 8 / (DividingRatio == 0 ? 0.5 : DividingRatio) / Math.Pow(2, (ReadNumber(3) >> 4) + 1));
 
     public NoiseChannel(SoundProcessor spu) : base(spu, 4)
     {
@@ -25,9 +25,9 @@ public sealed class NoiseChannel : BaseSoundChannel
     {
         _volume.Update(cycles);
         var amplitude = ChannelVolume * (_volume.Volume / 15f);
-        var delta = cycles / GameBoy.ClockFrequency;
+        var delta = cycles / GameBoySystem.ClockFrequency;
 
-        var sampleRate = _out.WaveFormat.SampleRate;
+        var sampleRate = _out.SampleRate;
         var sampleCount = (int)Math.Ceiling(delta * sampleRate) * 2;
 
         using (var memory = MemoryPool<float>.Shared.Rent(sampleCount))
@@ -52,7 +52,7 @@ public sealed class NoiseChannel : BaseSoundChannel
                 if (UseSoundLength) length -= delta;
             }
 
-            _out.BufferSoundSamples(buffer, 0, sampleCount);
+            _out.BufferSoundSamples(buffer, sampleCount);
         }
     }
 

@@ -20,7 +20,7 @@ public sealed class VolumeEnvelope
         var sweepCount = _channel.ReadNumber(2) & 7;
         if (sweepCount < 1) return;
 
-        timer += cycles / GameBoy.ClockFrequency;
+        timer += cycles / GameBoySystem.ClockFrequency;
 
         var interval = sweepCount / 64d;
         while (timer >= interval)

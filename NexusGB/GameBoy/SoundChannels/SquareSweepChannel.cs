@@ -18,7 +18,7 @@ public sealed class SquareSweepChannel : SquareChannel
     {
         if (SweepTime > 0)
         {
-            frequencySweepClock += cycles / GameBoy.ClockFrequency;
+            frequencySweepClock += cycles / GameBoySystem.ClockFrequency;
 
             while (frequencySweepClock >= SweepTime)
             {

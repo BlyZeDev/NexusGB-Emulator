@@ -151,7 +151,7 @@ public sealed class MemoryManagement
         return value;
     }
 
-    public static MemoryManagement LoadGamePak(string filepath, SoundProcessor sound)
+    public static MemoryManagement LoadGamePak(string filepath, SoundProcessor spu)
     {
         var rom = File.ReadAllBytes(filepath);
 
@@ -163,6 +163,6 @@ public sealed class MemoryManagement
             0x0F or 0x10 or 0x11 or 0x12 or 0x13 => new MemoryController3(rom),
             0x19 or 0x1A or 0x1B => new MemoryController5(rom),
             _ => throw new NotSupportedException($"MBC not supported: {rom[0x147]:X2}")
-        }, sound);
+        }, spu);
     }
 }
