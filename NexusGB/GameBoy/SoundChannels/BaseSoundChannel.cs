@@ -3,10 +3,22 @@
 public abstract class BaseSoundChannel
 {
     private readonly byte[] _numbers;
+    protected readonly int _channelNumber;
+    protected readonly SoundProcessor _spu;
+    protected readonly WindowsSoundOut _out;
 
-    protected BaseSoundChannel()
+    private float volume;
+
+    public ref float ChannelVolume => ref volume;
+
+    protected BaseSoundChannel(SoundProcessor spu, in int channelNumber)
     {
         _numbers = new byte[5];
+        _channelNumber = channelNumber;
+        _spu = spu;
+        _out = new WindowsSoundOut();
+
+        ChannelVolume = 1;
     }
 
     public abstract void Update(in int cycles);

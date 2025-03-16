@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 public sealed class MemoryManagement
 {
     private readonly IGamePak _gamepak;
-    private readonly SoundProcessor _sound;
+    private readonly SoundProcessor _spu;
 
     private readonly byte[] _vram;
     private readonly byte[] _wram0;
@@ -41,10 +41,10 @@ public sealed class MemoryManagement
 
     public ref byte JoystickPad => ref _io[0x00];
 
-    private MemoryManagement(IGamePak gamepak, SoundProcessor sound)
+    private MemoryManagement(IGamePak gamepak, SoundProcessor spu)
     {
         _gamepak = gamepak;
-        _sound = sound;
+        _spu = spu;
 
         _vram = new byte[8192];
         _wram0 = new byte[4096];
@@ -90,6 +90,7 @@ public sealed class MemoryManagement
             <= 0xFDFF => _wram1[address & 0xFFF],
             <= 0xFE9F => _oam[address - 0xFE00],
             <= 0xFEFF => 0x00,
+            >= 0xFF10 and < 0xFF40 => _spu.ReadByte(address),
             <= 0xFF7F => _io[address & 0x7F],
             _ => _hram[address & 0x7F]
         };
@@ -100,23 +101,15 @@ public sealed class MemoryManagement
         switch (address)
         {
             case <= 0x7FFF: _gamepak.WriteROM(address, value); break;
-
             case <= 0x9FFF: _vram[address & 0x1FFF] = value; break;
-
             case <= 0xBFFF: _gamepak.WriteERAM(address, value); break;
-
             case <= 0xCFFF: _wram0[address & 0xFFF] = value; break;
-
             case <= 0xDFFF: _wram1[address & 0xFFF] = value; break;
-
             case <= 0xEFFF: _wram0[address & 0xFFF] = value; break;
-
             case <= 0xFDFF: _wram1[address & 0xFFF] = value; break;
-
             case <= 0xFE9F: _oam[address & 0x9F] = value; break;
-
             case <= 0xFEFF: break;
-
+            case >= 0xFF10 and < 0xFF40: _spu.WriteByte(address, value); break;
             case <= 0xFF7F:
                 _io[address & 0x7F] = (byte)(address switch
                 {
@@ -126,7 +119,6 @@ public sealed class MemoryManagement
                     _ => value
                 });
                 break;
-
             default: _hram[address & 0x7F] = value; break;
         }
     }
