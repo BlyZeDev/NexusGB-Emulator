@@ -23,8 +23,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _spu = new SoundProcessor();
         _mmu = MemoryManagement.LoadGamePak(rom, _spu);
         _cpu = new Processor(_mmu);
+        _timer = new Timer(_mmu, _spu);
         _ppu = new PixelProcessor(Graphic, _mmu);
-        _timer = new Timer(_mmu);
         _joypad = new Joypad(_mmu);
     }
 
@@ -40,9 +40,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         accumulatedTime += DeltaTime * 1_000_000_000;
 
-        while (accumulatedTime >= 16740000)
+        while (accumulatedTime >= 16742706)
         {
-            accumulatedTime -= 16740000;
+            accumulatedTime -= 16742706;
 
             Input.UpdateGamepads();
             Input.Update();

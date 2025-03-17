@@ -90,7 +90,7 @@ public sealed class MemoryManagement
             <= 0xFDFF => _wram1[address & 0xFFF],
             <= 0xFE9F => _oam[address - 0xFE00],
             <= 0xFEFF => 0x00,
-            >= 0xFF10 and < 0xFF40 => _spu.ReadByte(address),
+            >= 0xFF10 and < 0xFF40 => ReadFromIo(address),
             <= 0xFF7F => _io[address & 0x7F],
             _ => _hram[address & 0x7F]
         };
@@ -109,7 +109,7 @@ public sealed class MemoryManagement
             case <= 0xFDFF: _wram1[address & 0xFFF] = value; break;
             case <= 0xFE9F: _oam[address & 0x9F] = value; break;
             case <= 0xFEFF: break;
-            case >= 0xFF10 and < 0xFF40: _spu.WriteByte(address, value); break;
+            case >= 0xFF10 and < 0xFF40: WriteToIoPorts(address, value); break;
             case <= 0xFF7F:
                 _io[address & 0x7F] = (byte)(address switch
                 {
@@ -120,6 +120,138 @@ public sealed class MemoryManagement
                 });
                 break;
             default: _hram[address & 0x7F] = value; break;
+        }
+    }
+
+    private byte ReadFromIo(in ushort address)
+    {
+        if (address >= 0xFF30 && address <= 0xFF3F)
+            return _spu.channel3.GetWaveRamSamplePair(address & 0xF);
+
+        switch (address & 0xFF)
+        {
+            case 0x10:
+                return _spu.channel1.FrequencySweepRegister;
+            case 0x11:
+                return _spu.channel1.SoundLengthWavePatternRegister;
+            case 0x12:
+                return _spu.channel1.VolumeEnvelopeRegister;
+            case 0x13:
+                //Write only
+                return 0xFF;
+            case 0x14:
+                return _spu.channel1.FrequencyRegisterHi;
+            case 0x16:
+                return _spu.channel2.SoundLengthWavePatternRegister;
+            case 0x17:
+                return _spu.channel2.VolumeEnvelopeRegister;
+            case 0x18:
+                //Write only
+                return 0xFF;
+            case 0x19:
+                return _spu.channel2.FrequencyRegisterHi;
+            case 0x1A:
+                return _spu.channel3.SoundOnOffRegister;
+            case 0x1B:
+                //Write only
+                return 0xFF;
+            case 0x1C:
+                return _spu.channel3.SelectOutputLevelRegister;
+            case 0x1D:
+                //Write only
+                return 0xFF;
+            case 0x1E:
+                return _spu.channel3.FrequencyRegisterHi;
+            case 0x20:
+                //Write only
+                return 0xFF;
+            case 0x21:
+                return _spu.channel4.VolumeEnvelopeRegister;
+            case 0x22:
+                return _spu.channel4.PolynomialCounterRegister;
+            case 0x23:
+                return _spu.channel4.CounterConsecutiveRegister;
+            case 0x24:
+                return _spu.ChannelControlRegister;
+            case 0x25:
+                return _spu.SoundOutputTerminalSelectRegister;
+            case 0x26:
+                return _spu.SoundOnOffRegister;
+        }
+
+        return 0xFF;
+    }
+
+    private void WriteToIoPorts(ushort address, byte data)
+    {
+        if (address >= 0xFF30 && address <= 0xFF3F)
+            _spu.channel3.SetWaveRamSamplePair(address & 0xF, data);
+
+        switch (address & 0xFF)
+        {
+            case 0x10:
+                _spu.channel1.FrequencySweepRegister = data;
+                break;
+            case 0x11:
+                _spu.channel1.SoundLengthWavePatternRegister = data;
+                break;
+            case 0x12:
+                _spu.channel1.VolumeEnvelopeRegister = data;
+                break;
+            case 0x13:
+                _spu.channel1.FrequencyRegisterLo = data;
+                break;
+            case 0x14:
+                _spu.channel1.FrequencyRegisterHi = data;
+                break;
+            case 0x16:
+                _spu.channel2.SoundLengthWavePatternRegister = data;
+                break;
+            case 0x17:
+                _spu.channel2.VolumeEnvelopeRegister = data;
+                break;
+            case 0x18:
+                _spu.channel2.FrequencyRegisterLo = data;
+                break;
+            case 0x19:
+                _spu.channel2.FrequencyRegisterHi = data;
+                break;
+            case 0x1A:
+                _spu.channel3.SoundOnOffRegister = data;
+                break;
+            case 0x1B:
+                _spu.channel3.SoundLengthRegister = data;
+                break;
+            case 0x1C:
+                _spu.channel3.SelectOutputLevelRegister = data;
+                break;
+            case 0x1D:
+                _spu.channel3.FrequencyRegisterLo = data;
+                break;
+            case 0x1E:
+                _spu.channel3.FrequencyRegisterHi = data;
+                break;
+            case 0x20:
+                _spu.channel4.SoundLengthRegister = data;
+                break;
+            case 0x21:
+                _spu.channel4.VolumeEnvelopeRegister = data;
+                break;
+            case 0x22:
+                _spu.channel4.PolynomialCounterRegister = data;
+                break;
+            case 0x23:
+                _spu.channel4.CounterConsecutiveRegister = data;
+                break;
+            case 0x24:
+                _spu.ChannelControlRegister = data;
+                break;
+            case 0x25:
+                _spu.SoundOutputTerminalSelectRegister = data;
+                break;
+            case 0x26:
+                _spu.SoundOnOffRegister = data;
+                break;
         }
     }
 

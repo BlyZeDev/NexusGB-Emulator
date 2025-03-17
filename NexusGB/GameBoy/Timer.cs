@@ -9,11 +9,16 @@ public sealed class Timer
     private static readonly ImmutableArray<int> _timerControlFrequencies = [1024, 16, 64, 256];
 
     private readonly MemoryManagement _mmu;
+    private readonly SoundProcessor _spu;
 
     private int divCounter;
     private int timerCounter;
 
-    public Timer(MemoryManagement mmu) => _mmu = mmu;
+    public Timer(MemoryManagement mmu, SoundProcessor spu)
+    {
+        _mmu = mmu;
+        _spu = spu;
+    }
 
     public void Update(in int cycles)
     {
@@ -23,11 +28,18 @@ public sealed class Timer
 
     private void HandleDivider(in int cycles)
     {
+        var prevDivider = _mmu.Divider;
+
         divCounter += cycles;
         while (divCounter >= DMG_DIV_FREQ)
         {
             _mmu.Divider++;
             divCounter -= DMG_DIV_FREQ;
+        }
+
+        if ((prevDivider & 0b0001_0000) != 0 && (_mmu.Divider & 0b0001_0000) == 0)
+        {
+            _spu.TickFrameSequencer();
         }
     }
 
