@@ -7,6 +7,8 @@ using NexusGB.GameBoy;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
+    private readonly WindowsSoundOut _soundOut;
+
     private readonly Processor _cpu;
     private readonly SoundProcessor _spu;
     private readonly MemoryManagement _mmu;
@@ -20,7 +22,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     public GameBoyEmulator(string rom)
     {
-        _spu = new SoundProcessor();
+        _soundOut = new WindowsSoundOut();
+
+        _spu = new SoundProcessor(_soundOut);
         _mmu = MemoryManagement.LoadGamePak(rom, _spu);
         _cpu = new Processor(_mmu);
         _timer = new Timer(_mmu, _spu);
@@ -31,7 +35,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     protected override void Load()
     {
         Settings.ColorPalette = new GameBoyColorPalette();
-        Settings.Font = new NexusFont("Consolas", new NexusSize(8));
+        Settings.Font = new NexusFont("Consolas", new NexusSize(5));
         Settings.Title = "NexusGB";
         Settings.StopGameKey = NexusKey.Escape;
     }
@@ -67,10 +71,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     protected override void OnCrash(Exception exception)
         => Utility.ShowAlert("Error", $"An error occured:\n{exception}", NexusAlertIcon.Error);
 
-    protected override void CleanUp()
-    {
-
-    }
+    protected override void CleanUp() => _soundOut.Dispose();
 
     private void HandleInterrupts()
     {

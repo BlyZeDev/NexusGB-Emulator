@@ -1,81 +1,37 @@
 ﻿namespace NexusGB.GameBoy;
 
 using NexusGB.GameBoy.SoundChannels;
-using SFML.Audio;
-using SFML.System;
+using System.Collections.Immutable;
+using System.Diagnostics;
 
-public sealed class SoundProcessor : SoundStream
+public sealed class SoundProcessor
 {
-    //Controls registers
-    //NR50
-    public byte ChannelControlRegister { get; set; }
+    private readonly ImmutableArray<BaseSoundChannel> _channels;
+    private readonly WaveSoundChannel _wave;
+    private readonly WindowsSoundOut _soundOut;
 
-    public byte LeftChannelVolume => (byte)((ChannelControlRegister & 0b0111_0000) >> 4);
-    public byte RightChannelVolume => (byte)(ChannelControlRegister & 0b0000_0111);
+    private int internalCounter;
+    private byte number50;
+    private byte number51;
+    private byte number52;
 
-    //NR51
-    public byte SoundOutputTerminalSelectRegister { get; set; }
+    public byte SoundOutputTerminalSelectRegister => number51;
 
-    //NR52
-    public byte SoundOnOffRegister
+    public byte LeftChannelVolume => (byte)((number50 & 0b0111_0000) >> 4);
+    public byte RightChannelVolume => (byte)(number50 & 0b0000_0111);
+
+    public bool Enabled => (number52 & 0b1000_0000) != 0;
+
+    public SoundProcessor(WindowsSoundOut soundOut)
     {
-        get => Bits.MakeByte(
-            Enabled, true, true, true, channel4.Playing, channel3.Playing, channel2.Playing, channel1.Playing
-        );
-        set => Enabled = (value & 0b1000_0000) != 0;
-    }
-
-    public bool Enabled { get; private set; }
-
-    public static readonly sbyte[,] WAVE_DUTY_TABLE =
-    {
-        { -1, 1, 1, 1, 1, 1, 1, 1 },
-        { -1, -1, 1, 1, 1, 1, 1, 1 },
-        { -1, -1, -1, -1, 1, 1, 1, 1 },
-        { -1, -1, -1, -1, -1, -1, 1, 1 }
-    };
-
-    private const int SAMPLE_RATE = 48000;
-    private const int SAMPLE_BUFFER_SIZE_IN_MILLISECONDS = 50;
-    private const int CHANNEL_COUNT = 2;
-
-    public const int SAMPLE_BUFFER_SIZE =
-        (int)(SAMPLE_RATE * CHANNEL_COUNT * (SAMPLE_BUFFER_SIZE_IN_MILLISECONDS / 1000f));
-
-    public const int VOLUME_MULTIPLIER = 25;
-
-    public int AmountOfSamples
-    {
-        get
-        {
-            lock (sampleBuffer)
-            {
-                return sampleBuffer.Count;
-            }
-        }
-    }
-
-
-    private int internalMainApuCounter;
-
-    public readonly ApuChannel1 channel1;
-    public readonly ApuChannel2 channel2;
-    public readonly ApuChannel3 channel3;
-    public readonly ApuChannel4 channel4;
-
-    private readonly List<short> sampleBuffer;
-
-    public SoundProcessor()
-    {
-        channel1 = new ApuChannel1(this);
-        channel2 = new ApuChannel2(this);
-        channel3 = new ApuChannel3(this);
-        channel4 = new ApuChannel4(this);
-
-        sampleBuffer = new List<short>(SAMPLE_BUFFER_SIZE);
-
-        Initialize(CHANNEL_COUNT, SAMPLE_RATE);
-        Play();
+        _channels =
+        [
+            new SquareSweepChannel(this),
+            new SquareChannel(this),
+            _wave = new WaveSoundChannel(this),
+            new NoiseChannel(this)
+        ];
+        _soundOut = soundOut;
     }
 
     public bool ShouldTickFrameSequencer { get; private set; }
@@ -87,99 +43,97 @@ public sealed class SoundProcessor : SoundStream
         ShouldTickFrameSequencer = true;
     }
 
-    public void Update(int cycles)
+    public void Update(in int cycles)
     {
         if (!Enabled)
         {
             Reset();
-            channel1.Reset();
-            channel2.Reset();
-            channel3.Reset();
-            channel4.Reset();
+            foreach (var channel in _channels)
+            {
+                channel.Reset();
+            }
 
             return;
         }
 
-        channel1.Update(cycles);
-        channel2.Update(cycles);
-        channel3.Update(cycles);
-        channel4.Update(cycles);
+        foreach (var channel in _channels)
+        {
+            channel.Update(cycles);
+        }
 
         if (ShouldTickFrameSequencer) ShouldTickFrameSequencer = false;
 
-        internalMainApuCounter += SAMPLE_RATE * cycles;
+        internalCounter += WindowsSoundOut.SAMPLE_RATE * cycles;
 
-        if (internalMainApuCounter < GameBoySystem.ClockFrequency) return;
+        if (internalCounter < GameBoySystem.ClockFrequency) return;
 
-        internalMainApuCounter -= (int)GameBoySystem.ClockFrequency;
+        internalCounter -= (int)GameBoySystem.ClockFrequency;
 
-        short leftSample = 0;
-        short rightSample = 0;
-
-        leftSample += channel1.GetCurrentAmplitudeLeft();
-        rightSample += channel1.GetCurrentAmplitudeRight();
-
-        leftSample += channel2.GetCurrentAmplitudeLeft();
-        rightSample += channel2.GetCurrentAmplitudeRight();
-
-        leftSample += channel3.GetCurrentAmplitudeLeft();
-        rightSample += channel3.GetCurrentAmplitudeRight();
-
-        leftSample += channel4.GetCurrentAmplitudeLeft();
-        rightSample += channel4.GetCurrentAmplitudeRight();
-
-        lock (sampleBuffer)
+        var leftSample = 0;
+        var rightSample = 0;
+        foreach (var channel in _channels)
         {
-            sampleBuffer.Add(leftSample);
-            sampleBuffer.Add(rightSample);
-        }
-    }
-
-    protected override bool OnGetData(out short[] samples)
-    {
-        lock (sampleBuffer)
-        {
-            if (sampleBuffer.Count >= SAMPLE_BUFFER_SIZE)
-            {
-                samples = sampleBuffer.GetRange(0, SAMPLE_BUFFER_SIZE).ToArray();
-
-                sampleBuffer.RemoveRange(0, SAMPLE_BUFFER_SIZE);
-            }
-            else
-            {
-                if (sampleBuffer.Count == 0)
-                    samples = new short[SAMPLE_BUFFER_SIZE];
-                else
-                {
-                    //Repeat full part of the buffer
-                    samples = new short[SAMPLE_BUFFER_SIZE];
-                    for (int i = 0; i < samples.Length; i++) samples[i] = sampleBuffer[i % sampleBuffer.Count];
-                }
-            }
+            leftSample += channel.GetCurrentAmplitudeLeft();
+            rightSample += channel.GetCurrentAmplitudeRight();
         }
 
-        return true;
+        _soundOut.AddSamples((short)leftSample, (short)rightSample);
     }
 
-    protected override void OnSeek(Time timeOffset)
+    public byte ReadByte(in ushort address)
     {
-        //Function is unused
-    }
-
-    public void ClearSampleBuffer()
-    {
-        lock (sampleBuffer)
+        switch (address)
         {
-            sampleBuffer.Clear();
+            case 0xFF24: return number50;
+            case 0xFF25: return number51;
+            case 0xFF26: return number52;
+
+            case >= 0xFF27 and < 0xFF30: return 0x00;
+            case >= 0xFF30 and < 0xFF40: return _wave.ReadRam((ushort)(address - 0xFF30));
+        }
+
+        var relativeAddress = address - 0xFF10;
+        var channel = _channels[relativeAddress / 5];
+        return (relativeAddress % 5) switch
+        {
+            0 => channel.Number0,
+            1 => channel.Number1,
+            2 => channel.Number2,
+            3 => channel.Number3,
+            4 => channel.Number4,
+            _ => throw new UnreachableException(nameof(ReadByte))
+        };
+    }
+
+    public void WriteByte(in ushort address, in byte value)
+    {
+        switch (address)
+        {
+            case 0xFF24: number50 = value; return;
+            case 0xFF25: number51 = value; return;
+            case 0xFF26: number52 = value; return;
+
+            case >= 0xFF27 and < 0xFF30: return;
+            case >= 0xFF30 and < 0xFF40: _wave.WriteRam((ushort)(address - 0xFF30), value); return;
+        }
+
+        var relativeAddress = address - 0xFF10;
+        var channel = _channels[relativeAddress / 5];
+        
+        switch (relativeAddress % 5)
+        {
+            case 0: channel.Number0 = value; break;
+            case 1: channel.Number1 = value; break;
+            case 2: channel.Number2 = value; break;
+            case 3: channel.Number3 = value; break;
+            case 4: channel.Number4 = value; break;
         }
     }
 
     private void Reset()
     {
-        ChannelControlRegister = 0;
-
-        SoundOutputTerminalSelectRegister = 0;
-
-        internalMainApuCounter = 0;
+        number50 = 0;
+        number51 = 0;
+        internalCounter = 0;
     }
 }
