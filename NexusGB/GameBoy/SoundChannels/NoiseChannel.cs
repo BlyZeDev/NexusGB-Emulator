@@ -57,7 +57,7 @@ public sealed class NoiseChannel : BaseSoundChannel
 	{
 		CheckDacEnabled();
 
-		if (!Playing) return;
+		if (!IsPlaying) return;
 
 		if (_spu.ShouldTickFrameSequencer) TickFrameSequencer();
 
@@ -82,7 +82,7 @@ public sealed class NoiseChannel : BaseSoundChannel
 
 	public override short GetCurrentAmplitudeLeft()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 7)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 7)) return 0;
 
 		var volume = currentEnvelopeVolume * _spu.LeftChannelVolume * VolumeMultiplier;
 
@@ -91,7 +91,7 @@ public sealed class NoiseChannel : BaseSoundChannel
 
 	public override short GetCurrentAmplitudeRight()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 3)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 3)) return 0;
 
 		var volume = currentEnvelopeVolume * _spu.RightChannelVolume * VolumeMultiplier;
 
@@ -117,14 +117,14 @@ public sealed class NoiseChannel : BaseSoundChannel
     private void CheckDacEnabled()
     {
         bool dacEnabled = InitialVolume != 0 || VolumeEnvelopeDirection;
-        if (!dacEnabled) Playing = false;
+        if (!dacEnabled) IsPlaying = false;
     }
 
     private void TriggerWritten()
     {
         if (!_spu.Enabled || !Bits.Is(number4, 7)) return;
 
-        Playing = true;
+        IsPlaying = true;
 
         if (lengthTimer == 0) lengthTimer = 64;
 
@@ -139,7 +139,7 @@ public sealed class NoiseChannel : BaseSoundChannel
     private void TickFrameSequencer()
     {
         if (currentFrameSequencerTick % 2 == 0) UpdateLength();
-        if (Playing && currentFrameSequencerTick == 7) UpdateVolume();
+        if (IsPlaying && currentFrameSequencerTick == 7) UpdateVolume();
 
         currentFrameSequencerTick++;
         currentFrameSequencerTick %= 8;
@@ -151,7 +151,7 @@ public sealed class NoiseChannel : BaseSoundChannel
 
         if (lengthTimer <= 0 || --lengthTimer != 0) return;
 
-        Playing = false;
+        IsPlaying = false;
     }
 
     private void UpdateVolume()

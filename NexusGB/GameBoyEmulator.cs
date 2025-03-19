@@ -35,7 +35,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     protected override void Load()
     {
         Settings.ColorPalette = new GameBoyColorPalette();
-        Settings.Font = new NexusFont("Consolas", new NexusSize(5));
+        Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.Title = "NexusGB";
         Settings.StopGameKey = NexusKey.Escape;
     }
@@ -48,8 +48,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         {
             accumulatedTime -= 16742706;
 
-            Input.UpdateGamepads();
-            Input.Update();
             _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
             while (cyclesThisUpdate < GameBoySystem.CyclesPerUpdate)
@@ -65,11 +63,18 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             }
 
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
+
+            Input.UpdateGamepads();
+            Input.Update();
         }
     }
 
     protected override void OnCrash(Exception exception)
-        => Utility.ShowAlert("Error", $"An error occured:\n{exception}", NexusAlertIcon.Error);
+    {
+#if !DEBUG
+        Utility.ShowAlert("Error", $"An error occured:\n{exception}", NexusAlertIcon.Error);
+#endif
+    }
 
     protected override void CleanUp() => _soundOut.Dispose();
 

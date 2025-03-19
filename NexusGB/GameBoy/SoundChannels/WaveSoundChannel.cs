@@ -62,31 +62,31 @@ public sealed class WaveSoundChannel : BaseSoundChannel
 	{
 		CheckDacEnabled();
 
-		if (!Playing) return;
+		if (!IsPlaying) return;
 
 		if (_spu.ShouldTickFrameSequencer) TickFrameSequencer();
 
 		frequencyTimer -= cycles;
 		if (frequencyTimer > 0) return;
 
-		frequencyTimer += (2048 - (ushort)(Bits.MakeWord(number4, Number3) & 0x7FF)) * 2;
+		frequencyTimer += (2048 - (ushort)(Bits.MakeWord(Number3, number4) & 0x7FF)) * 2;
 
 		waveRamPosition++;
 		waveRamPosition %= 0x20;
 	}
 
-    public byte ReadRam(in ushort address) => Playing ? (byte)0xFF : _ram[address];
+    public byte ReadRam(in ushort address) => IsPlaying ? (byte)0xFF : _ram[address];
 
     public void WriteRam(in ushort address, in byte value)
 	{
-		if (Playing) return;
+		if (IsPlaying) return;
 
 		_ram[address] = value;
 	}
 
 	public override short GetCurrentAmplitudeLeft()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 6)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 6)) return 0;
 
 		var volume = _spu.LeftChannelVolume * VolumeMultiplier;
 
@@ -95,7 +95,7 @@ public sealed class WaveSoundChannel : BaseSoundChannel
 
 	public override short GetCurrentAmplitudeRight()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 2)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 2)) return 0;
 
 		var volume = _spu.RightChannelVolume * VolumeMultiplier;
 
@@ -105,7 +105,7 @@ public sealed class WaveSoundChannel : BaseSoundChannel
     {
         if (!_spu.Enabled || !Bits.Is(number4, 7)) return;
 
-        Playing = true;
+        IsPlaying = true;
 
         if (lengthTimer == 0) lengthTimer = 256;
 
@@ -114,7 +114,7 @@ public sealed class WaveSoundChannel : BaseSoundChannel
 
     private void CheckDacEnabled()
     {
-        if ((number0 & 0b1000_0000) != 0) Playing = false;
+        if ((number0 & 0b1000_0000) != 0) IsPlaying = false;
     }
 
     private void TickFrameSequencer()
@@ -131,7 +131,7 @@ public sealed class WaveSoundChannel : BaseSoundChannel
 
         if (lengthTimer <= 0 || --lengthTimer != 0) return;
 
-        Playing = false;
+        IsPlaying = false;
     }
 
     private sbyte GetWaveRamSample(in int index)

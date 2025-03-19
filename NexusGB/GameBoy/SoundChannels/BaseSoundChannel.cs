@@ -49,7 +49,7 @@ public abstract class BaseSoundChannel
         set => number4 = value;
     }
 
-    public bool Playing { get; protected set; }
+    public bool IsPlaying { get; protected set; }
 
     protected BaseSoundChannel(SoundProcessor spu) => _spu = spu;
 

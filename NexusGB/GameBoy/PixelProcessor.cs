@@ -110,6 +110,9 @@ public sealed class PixelProcessor
         var windowX = (byte)(_mmu.WindowX - 7);
         var windowY = _mmu.WindowY;
         var lcdControlY = _mmu.LCDControlY;
+
+        if (lcdControlY > SCREEN_WIDTH) return;
+
         var lcdControl = _mmu.LCDControl;
         var scrollY = _mmu.ScrollY;
         var scrollX = _mmu.ScrollX;
@@ -148,6 +151,9 @@ public sealed class PixelProcessor
     private void RenderSprites()
     {
         var lcdControlY = _mmu.LCDControlY;
+
+        if (lcdControlY > SCREEN_WIDTH) return;
+
         var lcdControl = _mmu.LCDControl;
         for (int i = 0x9C; i >= 0; i -= 4)
         {

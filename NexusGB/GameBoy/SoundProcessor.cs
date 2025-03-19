@@ -12,15 +12,18 @@ public sealed class SoundProcessor
 
     private int internalCounter;
     private byte number50;
-    private byte number51;
-    private byte number52;
 
-    public byte SoundOutputTerminalSelectRegister => number51;
+    public byte Number51 { get; private set; }
+    public byte Number52
+    {
+        get => Bits.MakeByte(Enabled, true, true, true, _channels[3].IsPlaying, _channels[2].IsPlaying, _channels[1].IsPlaying, _channels[0].IsPlaying);
+        private set => Enabled = (value & 0b1000_0000) != 0;
+    }
 
     public byte LeftChannelVolume => (byte)((number50 & 0b0111_0000) >> 4);
     public byte RightChannelVolume => (byte)(number50 & 0b0000_0111);
 
-    public bool Enabled => (number52 & 0b1000_0000) != 0;
+    public bool Enabled { get; private set; }
 
     public SoundProcessor(WindowsSoundOut soundOut)
     {
@@ -73,8 +76,11 @@ public sealed class SoundProcessor
         var rightSample = 0;
         foreach (var channel in _channels)
         {
-            leftSample += channel.GetCurrentAmplitudeLeft();
-            rightSample += channel.GetCurrentAmplitudeRight();
+            if (channel.IsPlaying)
+            {
+                leftSample += channel.GetCurrentAmplitudeLeft();
+                rightSample += channel.GetCurrentAmplitudeRight();
+            }
         }
 
         _soundOut.AddSamples((short)leftSample, (short)rightSample);
@@ -85,8 +91,8 @@ public sealed class SoundProcessor
         switch (address)
         {
             case 0xFF24: return number50;
-            case 0xFF25: return number51;
-            case 0xFF26: return number52;
+            case 0xFF25: return Number51;
+            case 0xFF26: return Number52;
 
             case >= 0xFF27 and < 0xFF30: return 0x00;
             case >= 0xFF30 and < 0xFF40: return _wave.ReadRam((ushort)(address - 0xFF30));
@@ -110,8 +116,8 @@ public sealed class SoundProcessor
         switch (address)
         {
             case 0xFF24: number50 = value; return;
-            case 0xFF25: number51 = value; return;
-            case 0xFF26: number52 = value; return;
+            case 0xFF25: Number51 = value; return;
+            case 0xFF26: Number52 = value; return;
 
             case >= 0xFF27 and < 0xFF30: return;
             case >= 0xFF30 and < 0xFF40: _wave.WriteRam((ushort)(address - 0xFF30), value); return;
@@ -133,7 +139,7 @@ public sealed class SoundProcessor
     private void Reset()
     {
         number50 = 0;
-        number51 = 0;
+        Number51 = 0;
         internalCounter = 0;
     }
 }

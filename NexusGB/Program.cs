@@ -12,7 +12,10 @@ sealed class Program
             return;
         }
 
-        using (var emulator = new GameBoyEmulator(@"C:\Users\leschi\Downloads\Tetris.gb"))
+        const string TestRomsBasePath = @"C:\Users\leons\OneDrive\Desktop\!Programmierung\!Meine Programme\C#\ConsoleApps\NexusGB\NexusGB.Tests";
+        const string PlayRomsBasePath = @"C:\Users\leons\Downloads";
+
+        using (var emulator = new GameBoyEmulator(Path.Combine(PlayRomsBasePath, "Tetris.gb")))
         {
             emulator.Start();
             emulator.Stop();

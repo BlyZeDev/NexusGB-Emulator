@@ -22,7 +22,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
     private ushort FrequencyRegister
     {
-        get => (ushort)(Bits.MakeWord(number4, Number3) & 0x7FF);
+        get => (ushort)(Bits.MakeWord(Number3, number4) & 0x7FF);
         set
         {
             number4 = (byte)((number4 & 0b1111_1000) | (Bits.GetHighByte(value) & 0b0000_0111));
@@ -63,7 +63,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 	{
 		CheckDacEnabled();
 
-		if (!Playing) return;
+		if (!IsPlaying) return;
 
 		if (_spu.ShouldTickFrameSequencer) TickFrameSequencer();
 
@@ -93,7 +93,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
 	public override short GetCurrentAmplitudeLeft()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 4)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 4)) return 0;
 
 		var volume = currentEnvelopeVolume * _spu.LeftChannelVolume * VolumeMultiplier;
 
@@ -102,7 +102,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
 	public override short GetCurrentAmplitudeRight()
 	{
-		if (!_spu.Enabled || !Bits.Is(_spu.SoundOutputTerminalSelectRegister, 0)) return 0;
+		if (!_spu.Enabled || !Bits.Is(_spu.Number51, 0)) return 0;
 
 		var volume = currentEnvelopeVolume * _spu.RightChannelVolume * VolumeMultiplier;
 
@@ -112,8 +112,8 @@ public sealed class SquareSweepChannel : BaseSoundChannel
     private void TickFrameSequencer()
     {
         if (currentFrameSequencerTick % 2 == 0) UpdateLength();
-        if (Playing && currentFrameSequencerTick == 7) UpdateVolume();
-        if (Playing && currentFrameSequencerTick is 2 or 6) UpdateSweep();
+        if (IsPlaying && currentFrameSequencerTick == 7) UpdateVolume();
+        if (IsPlaying && currentFrameSequencerTick is 2 or 6) UpdateSweep();
 
         currentFrameSequencerTick++;
         currentFrameSequencerTick %= 8;
@@ -125,7 +125,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
         if (lengthTimer <= 0 || --lengthTimer != 0) return;
 
-        Playing = false;
+        IsPlaying = false;
     }
 
     private void UpdateVolume()
@@ -151,7 +151,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
         if (!sweepEnabled || FrequencySweepPeriod == 0) return;
 
-        int newFrequency = CalculateNewFrequency();
+        var newFrequency = CalculateNewFrequency();
 
         if (newFrequency >= 2048 || FrequencySweepShiftAmount <= 0) return;
 
@@ -163,13 +163,13 @@ public sealed class SquareSweepChannel : BaseSoundChannel
 
     private int CalculateNewFrequency()
     {
-        int newFrequency = shadowFrequency >> FrequencySweepShiftAmount;
+        var newFrequency = shadowFrequency >> FrequencySweepShiftAmount;
 
         if (Bits.Is(Number0, 3)) newFrequency = -newFrequency;
 
         newFrequency += shadowFrequency;
 
-        if (newFrequency >= 2048) Playing = false;
+        if (newFrequency >= 2048) IsPlaying = false;
 
         return newFrequency;
     }
@@ -178,7 +178,7 @@ public sealed class SquareSweepChannel : BaseSoundChannel
     {
         if (!_spu.Enabled || !Bits.Is(number4, 7)) return;
 
-        Playing = true;
+        IsPlaying = true;
 
         if (lengthTimer == 0) lengthTimer = 64;
 
@@ -197,6 +197,6 @@ public sealed class SquareSweepChannel : BaseSoundChannel
     private void CheckDacEnabled()
     {
         var dacEnabled = InitialVolume != 0 || VolumeEnvelopeDirection;
-        if (!dacEnabled) Playing = false;
+        if (!dacEnabled) IsPlaying = false;
     }
 }

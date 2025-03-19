@@ -31,17 +31,17 @@ public sealed class WindowsSoundOut : SoundStream
         if (_sampleBuffer.Count >= SAMPLE_BUFFER_SIZE)
         {
             samples = _sampleBuffer.GetRange(0, SAMPLE_BUFFER_SIZE).ToArray();
-
             _sampleBuffer.RemoveRange(0, SAMPLE_BUFFER_SIZE);
         }
         else
         {
-            if (_sampleBuffer.Count == 0)
-                samples = new short[SAMPLE_BUFFER_SIZE];
-            else
+            samples = new short[SAMPLE_BUFFER_SIZE];
+            if (_sampleBuffer.Count != 0)
             {
-                samples = new short[SAMPLE_BUFFER_SIZE];
-                for (int i = 0; i < samples.Length; i++) samples[i] = _sampleBuffer[i % _sampleBuffer.Count];
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    samples[i] = _sampleBuffer[i % _sampleBuffer.Count];
+                }
             }
         }
 

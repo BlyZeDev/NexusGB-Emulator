@@ -8,6 +8,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+	<PropertyGroup>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+	</PropertyGroup>
+	
   <ItemGroup>
     <PackageReference Include="ConsoleNexusEngine" Version="8.2.0" />
     <PackageReference Include="SFML.Audio" Version="2.6.1" />
