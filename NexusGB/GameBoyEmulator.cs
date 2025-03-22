@@ -8,6 +8,7 @@ using NexusGB.GameBoy;
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
     private readonly WindowsSoundOut _soundOut;
+    private readonly DiscordRpc _rpc;
 
     private readonly Processor _cpu;
     private readonly SoundProcessor _spu;
@@ -23,6 +24,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     public GameBoyEmulator(string rom)
     {
         _soundOut = new WindowsSoundOut();
+        _rpc = DiscordRpc.Initialize();
+        _rpc.SetMenu();
 
         _spu = new SoundProcessor(_soundOut);
         _mmu = MemoryManagement.LoadGamePak(rom, _spu);
@@ -48,6 +51,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         {
             accumulatedTime -= 16742706;
 
+            Input.UpdateGamepads();
+            Input.Update();
             _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
             while (cyclesThisUpdate < GameBoySystem.CyclesPerUpdate)
@@ -63,9 +68,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             }
 
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
-
-            Input.UpdateGamepads();
-            Input.Update();
         }
     }
 
@@ -76,7 +78,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 #endif
     }
 
-    protected override void CleanUp() => _soundOut.Dispose();
+    protected override void CleanUp()
+    {
+        _soundOut.Dispose();
+        _rpc.Dispose();
+    }
 
     private void HandleInterrupts()
     {

@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 public sealed record GameBoyColorPalette : NexusColorPalette
 {
-    protected override ImmutableArray<NexusColor> Colors =>
+    protected override ImmutableArray<NexusColor> Colors { get; } =
     [
         new NexusColor(0xFF, 0xFF, 0xFF),
         new NexusColor(0x80, 0x80, 0x80),

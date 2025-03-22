@@ -6,14 +6,15 @@ sealed class Program
 {
     static void Main()
     {
+        //To be removed
+        const string TestRomsBasePath = @"C:\Users\leons\OneDrive\Desktop\!Programmierung\!Meine Programme\C#\ConsoleApps\NexusGB\NexusGB.Tests";
+        const string PlayRomsBasePath = @"C:\Users\leons\Downloads";
+
         if (!NexusEngineHelper.IsSupportedConsole())
         {
             NexusEngineHelper.StartInSupportedConsole();
             return;
         }
-
-        const string TestRomsBasePath = @"C:\Users\leons\OneDrive\Desktop\!Programmierung\!Meine Programme\C#\ConsoleApps\NexusGB\NexusGB.Tests";
-        const string PlayRomsBasePath = @"C:\Users\leons\Downloads";
 
         using (var emulator = new GameBoyEmulator(Path.Combine(PlayRomsBasePath, "Tetris.gb")))
         {
