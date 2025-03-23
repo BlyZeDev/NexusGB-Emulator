@@ -23,10 +23,16 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     public GameBoyEmulator(string rom)
     {
+        Settings.ColorPalette = new GameBoyColorPalette();
+        Settings.Font = new NexusFont("Consolas", new NexusSize(8));
+        Settings.Title = "NexusGB";
+        Settings.ForceStopKey = NexusKey.Escape;
+
         _soundOut = new WindowsSoundOut
         {
             Volume = 25f
         };
+
         _rpc = DiscordRpc.Initialize();
         _rpc.SetMenu();
 
@@ -34,16 +40,13 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _mmu = MemoryManagement.LoadGamePak(rom, _spu);
         _cpu = new Processor(_mmu);
         _timer = new Timer(_mmu, _spu);
-        _ppu = new PixelProcessor(Graphic, _mmu);
+        _ppu = new PixelProcessor(Graphic, _mmu, BufferSize.Width, BufferSize.Height);
         _joypad = new Joypad(_mmu);
     }
 
     protected override void Load()
     {
-        Settings.ColorPalette = new GameBoyColorPalette();
-        Settings.Font = new NexusFont("Consolas", new NexusSize(8));
-        Settings.Title = "NexusGB";
-        Settings.ForceStopKey = NexusKey.Escape;
+        
     }
     
     protected override void Update()

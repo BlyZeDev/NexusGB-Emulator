@@ -21,20 +21,22 @@ public sealed class PixelProcessor
 
     private readonly NexusConsoleGraphic _graphics;
     private readonly MemoryManagement _mmu;
+    private readonly int _offsetX;
+    private readonly int _offsetY;
 
     private int scanlineCounter;
 
-    public PixelProcessor(NexusConsoleGraphic graphics, MemoryManagement mmu)
+    public PixelProcessor(NexusConsoleGraphic graphics, MemoryManagement mmu, in int pixelCountX, in int pixelCountY)
     {
         _graphics = graphics;
         _mmu = mmu;
+
+        _offsetX = (pixelCountX - SCREEN_WIDTH) / 4;
+        _offsetY = (pixelCountY - SCREEN_HEIGHT) / 4;
     }
 
     public void Update(in int cycles)
     {
-        scanlineCounter += cycles;
-        var currentMode = (byte)(_mmu.LCDControlStatus & 0x03);
-
         if (!IsLCDEnabled(_mmu.LCDControl))
         {
             scanlineCounter = 0;
@@ -43,8 +45,25 @@ public sealed class PixelProcessor
             return;
         }
 
-        switch (currentMode)
+        scanlineCounter += cycles;
+
+        switch (_mmu.LCDControlStatus & 0x03)
         {
+            case 2:
+                if (scanlineCounter >= OAM_CYCLES)
+                {
+                    ChangeSTATMode(3);
+                    scanlineCounter -= OAM_CYCLES;
+                }
+                break;
+            case 3:
+                if (scanlineCounter >= VRAM_CYCLES)
+                {
+                    ChangeSTATMode(0);
+                    DrawScanLine();
+                    scanlineCounter -= VRAM_CYCLES;
+                }
+                break;
             case 0:
                 if (scanlineCounter >= HBLANK_CYCLES)
                 {
@@ -73,21 +92,6 @@ public sealed class PixelProcessor
                     }
                 }
                 break;
-            case 2:
-                if (scanlineCounter >= OAM_CYCLES)
-                {
-                    ChangeSTATMode(3);
-                    scanlineCounter -= OAM_CYCLES;
-                }
-                break;
-            case 3:
-                if (scanlineCounter >= VRAM_CYCLES)
-                {
-                    ChangeSTATMode(0);
-                    DrawScanLine();
-                    scanlineCounter -= VRAM_CYCLES;
-                }
-                break;
         }
 
         if (_mmu.LCDControlY == _mmu.LYCompare)
@@ -111,7 +115,7 @@ public sealed class PixelProcessor
         var windowY = _mmu.WindowY;
         var lcdControlY = _mmu.LCDControlY;
 
-        if (lcdControlY > SCREEN_WIDTH) return;
+        if (lcdControlY > SCREEN_HEIGHT) return;
 
         var lcdControl = _mmu.LCDControl;
         var scrollY = _mmu.ScrollY;
@@ -144,7 +148,7 @@ public sealed class PixelProcessor
             }
 
             var colorIdThroughtPalette = GetColorIdThroughtPalette(backgroundPalette, GetColorIdBits(7 - (x & 7), low, high));
-            _graphics.DrawPixel(new NexusCoord(p, lcdControlY), new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette)));
+            _graphics.DrawPixel(new NexusCoord(p + _offsetX, lcdControlY + _offsetY), new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette), new NexusColorIndex(colorIdThroughtPalette)));
         }
     }
 
@@ -152,7 +156,7 @@ public sealed class PixelProcessor
     {
         var lcdControlY = _mmu.LCDControlY;
 
-        if (lcdControlY > SCREEN_WIDTH) return;
+        if (lcdControlY > SCREEN_HEIGHT) return;
 
         var lcdControl = _mmu.LCDControl;
         for (int i = 0x9C; i >= 0; i -= 4)
@@ -179,10 +183,10 @@ public sealed class PixelProcessor
 
                     if (x + p >= 0 && x + p < SCREEN_WIDTH)
                     {
-                        var coord = new NexusCoord(x + p, lcdControlY);
+                        var coord = new NexusCoord(x + p + _offsetX, lcdControlY + _offsetY);
 
                         if (!IsTransparent(colorId) && (IsAboveBackground(attribute) || IsBackgroundWhite(_mmu.BackgroundPalette, coord)))
-                            _graphics.DrawPixel(coord, new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette)));
+                            _graphics.DrawPixel(coord, new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette), new NexusColorIndex(colorIdThroughtPalette)));
                     }
                 }
             }

@@ -24,7 +24,6 @@ sealed class Program
         using (var emulator = new GameBoyEmulator(rom))
         {
             emulator.Start();
-            emulator.Stop();
         }
     }
 }
