@@ -23,7 +23,10 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     public GameBoyEmulator(string rom)
     {
-        _soundOut = new WindowsSoundOut();
+        _soundOut = new WindowsSoundOut
+        {
+            Volume = 25f
+        };
         _rpc = DiscordRpc.Initialize();
         _rpc.SetMenu();
 
@@ -40,7 +43,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         Settings.ColorPalette = new GameBoyColorPalette();
         Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.Title = "NexusGB";
-        Settings.StopGameKey = NexusKey.Escape;
+        Settings.ForceStopKey = NexusKey.Escape;
     }
     
     protected override void Update()

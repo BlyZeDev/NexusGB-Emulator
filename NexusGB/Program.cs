@@ -1,22 +1,27 @@
 ﻿namespace NexusGB;
 
 using ConsoleNexusEngine.Helpers;
+using NexusGB.Statics;
 
 sealed class Program
 {
     static void Main()
     {
-        //To be removed
-        const string TestRomsBasePath = @"C:\Users\leons\OneDrive\Desktop\!Programmierung\!Meine Programme\C#\ConsoleApps\NexusGB\NexusGB.Tests";
-        const string PlayRomsBasePath = @"C:\Users\leons\Downloads";
-
         if (!NexusEngineHelper.IsSupportedConsole())
         {
             NexusEngineHelper.StartInSupportedConsole();
             return;
         }
 
-        using (var emulator = new GameBoyEmulator(Path.Combine(PlayRomsBasePath, "Tetris.gb")))
+        var rom = RomFileHandler.OpenRomFile(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+        if (rom is null)
+        {
+            Console.Write("Invalid Rom file...");
+            Console.ReadKey(true);
+            return;
+        }
+
+        using (var emulator = new GameBoyEmulator(rom))
         {
             emulator.Start();
             emulator.Stop();

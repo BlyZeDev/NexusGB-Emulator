@@ -1,15 +1,10 @@
-﻿namespace NexusGB;
+﻿namespace NexusGB.Statics;
 
 using System.Runtime.InteropServices;
 
-public sealed class RomFileHandler
+public static class RomFileHandler
 {
-    public RomFileHandler()
-    {
-
-    }
-
-    public string? OpenRomFile(string initialDirectory)
+    public static string? OpenRomFile(string initialDirectory)
     {
         var ofn = new OpenFileName
         {
