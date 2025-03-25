@@ -92,12 +92,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     private void HandleInterrupts()
     {
-        var interruptEnable = _mmu.InterruptEnable;
-        var interruptFlag = _mmu.InterruptFlag;
+        var ief = _mmu.InterruptEnable & _mmu.InterruptFlag;
 
         for (int i = 0; i < 5; i++)
         {
-            if ((((interruptEnable & interruptFlag) >> i) & 0x01) == 1)
+            if (((ief >> i) & 0x01) == 1)
             {
                 _cpu.ExecuteInterrupt(i);
             }

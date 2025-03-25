@@ -8,8 +8,6 @@ public sealed class PixelProcessor
 {
     private const char Pixel = '█';
 
-    private const int SCREEN_WIDTH = 160;
-    private const int SCREEN_HEIGHT = 144;
     private const int SCREEN_VBLANK_HEIGHT = 153;
     private const int OAM_CYCLES = 80;
     private const int VRAM_CYCLES = 172;
@@ -31,8 +29,8 @@ public sealed class PixelProcessor
         _graphics = graphics;
         _mmu = mmu;
 
-        _offsetX = (pixelCountX - SCREEN_WIDTH) / 4;
-        _offsetY = (pixelCountY - SCREEN_HEIGHT) / 4;
+        _offsetX = (pixelCountX - GameBoySystem.ScreenWidth) / 4;
+        _offsetY = (pixelCountY - GameBoySystem.ScreenHeight) / 4;
     }
 
     public void Update(in int cycles)
@@ -70,7 +68,7 @@ public sealed class PixelProcessor
                     _mmu.LCDControlY++;
                     scanlineCounter -= HBLANK_CYCLES;
 
-                    if (_mmu.LCDControlY == SCREEN_HEIGHT)
+                    if (_mmu.LCDControlY == GameBoySystem.ScreenHeight)
                     {
                         ChangeSTATMode(1);
                         _mmu.RequestInterrupt(VBLANK_INTERRUPT);
@@ -115,7 +113,7 @@ public sealed class PixelProcessor
         var windowY = _mmu.WindowY;
         var lcdControlY = _mmu.LCDControlY;
 
-        if (lcdControlY > SCREEN_HEIGHT) return;
+        if (lcdControlY > GameBoySystem.ScreenHeight) return;
 
         var lcdControl = _mmu.LCDControl;
         var scrollY = _mmu.ScrollY;
@@ -131,7 +129,7 @@ public sealed class PixelProcessor
 
         byte high = 0;
         byte low = 0;
-        for (int p = 0; p < SCREEN_WIDTH; p++)
+        for (int p = 0; p < GameBoySystem.ScreenWidth; p++)
         {
             var x = (byte)(isWindow && p >= windowX ? p - windowX : p + scrollX);
             if ((p & 0x07) == 0 || ((p + scrollX) & 0x07) == 0)
@@ -156,7 +154,7 @@ public sealed class PixelProcessor
     {
         var lcdControlY = _mmu.LCDControlY;
 
-        if (lcdControlY > SCREEN_HEIGHT) return;
+        if (lcdControlY > GameBoySystem.ScreenHeight) return;
 
         var lcdControl = _mmu.LCDControl;
         for (int i = 0x9C; i >= 0; i -= 4)
@@ -181,7 +179,7 @@ public sealed class PixelProcessor
                     var colorId = GetColorIdBits(IsXFlipped(attribute) ? p : 7 - p, low, high);
                     var colorIdThroughtPalette = GetColorIdThroughtPalette(palette, colorId);
 
-                    if (x + p >= 0 && x + p < SCREEN_WIDTH)
+                    if (x + p >= 0 && x + p < GameBoySystem.ScreenWidth)
                     {
                         var coord = new NexusCoord(x + p + _offsetX, lcdControlY + _offsetY);
 
