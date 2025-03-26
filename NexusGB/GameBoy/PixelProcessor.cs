@@ -8,12 +8,6 @@ public sealed class PixelProcessor
 {
     private const char Pixel = '█';
 
-    private const int SCREEN_VBLANK_HEIGHT = 153;
-    private const int OAM_CYCLES = 80;
-    private const int VRAM_CYCLES = 172;
-    private const int HBLANK_CYCLES = 204;
-    private const int SCANLINE_CYCLES = 456;
-
     private const int VBLANK_INTERRUPT = 0;
     private const int LCD_INTERRUPT = 1;
 
@@ -23,6 +17,18 @@ public sealed class PixelProcessor
     private readonly int _offsetY;
 
     private int scanlineCounter;
+    private int windowCounter;
+    private bool mode0Requested;
+    private bool mode1Requested;
+    private bool mode2Requested;
+    private bool vBlankRequested;
+    private bool coincidenceRequested;
+    private bool lastFrameEnabled;
+
+    private bool IsLcdEnabled => Bits.Is(_mmu.LCDControl, 7);
+    private bool IsSignedAddress => !Bits.Is(_mmu.LCDControl, 4);
+    private ushort TileDataAddress => (ushort)(Bits.Is(_mmu.LCDControl, 4) ? 0x8000 : 0x8800);
+    private int SpriteSize => Bits.Is(_mmu.LCDControl, 2) ? 16 : 8;
 
     public PixelProcessor(NexusConsoleGraphic graphics, MemoryManagement mmu, in int pixelCountX, in int pixelCountY)
     {
@@ -35,210 +41,314 @@ public sealed class PixelProcessor
 
     public void Update(in int cycles)
     {
-        if (!IsLCDEnabled(_mmu.LCDControl))
+        if (!IsLcdEnabled)
         {
-            scanlineCounter = 0;
             _mmu.LCDControlY = 0;
-            _mmu.LCDControlStatus = (byte)(_mmu.LCDControlStatus & ~0x03);
+            scanlineCounter = 0;
+            windowCounter = 0;
+
+            mode0Requested = false;
+            mode1Requested = false;
+            mode2Requested = false;
+            coincidenceRequested = false;
+            vBlankRequested = false;
+
+            SetMode(0);
+
             return;
         }
 
         scanlineCounter += cycles;
 
-        switch (_mmu.LCDControlStatus & 0x03)
+        if (scanlineCounter >= 456)
         {
-            case 2:
-                if (scanlineCounter >= OAM_CYCLES)
-                {
-                    ChangeSTATMode(3);
-                    scanlineCounter -= OAM_CYCLES;
-                }
-                break;
-            case 3:
-                if (scanlineCounter >= VRAM_CYCLES)
-                {
-                    ChangeSTATMode(0);
-                    DrawScanLine();
-                    scanlineCounter -= VRAM_CYCLES;
-                }
-                break;
-            case 0:
-                if (scanlineCounter >= HBLANK_CYCLES)
-                {
-                    _mmu.LCDControlY++;
-                    scanlineCounter -= HBLANK_CYCLES;
+            if (_mmu.LCDControlY < GameBoySystem.ScreenHeight) DrawScanLine();
 
-                    if (_mmu.LCDControlY == GameBoySystem.ScreenHeight)
-                    {
-                        ChangeSTATMode(1);
-                        _mmu.RequestInterrupt(VBLANK_INTERRUPT);
-                        _graphics.Render();
-                    }
-                    else ChangeSTATMode(2);
-                }
-                break;
-            case 1:
-                if (scanlineCounter >= SCANLINE_CYCLES)
-                {
-                    _mmu.LCDControlY++;
-                    scanlineCounter -= SCANLINE_CYCLES;
+            coincidenceRequested = false;
+            Bits.Clear(ref _mmu.LCDControlStatus, 2);
 
-                    if (_mmu.LCDControlY > SCREEN_VBLANK_HEIGHT)
-                    {
-                        ChangeSTATMode(2);
-                        _mmu.LCDControlY = 0;
-                    }
-                }
-                break;
+            _mmu.LCDControlY++;
+            scanlineCounter -= 456;
         }
 
-        if (_mmu.LCDControlY == _mmu.LYCompare)
-        {
-            Bits.Set(ref _mmu.LCDControlStatus, 2);
-            if (Bits.Is(_mmu.LCDControlStatus, 6)) _mmu.RequestInterrupt(LCD_INTERRUPT);
-        }
-        else Bits.Clear(ref _mmu.LCDControlStatus, 2);
+        SetSTAT();
+
+        if (_mmu.LCDControlY != _mmu.LYCompare) return;
+
+        Bits.Set(ref _mmu.LCDControlStatus, 2);
+
+        if (!Bits.Is(_mmu.LCDControlStatus, 6) || coincidenceRequested) return;
+
+        _mmu.RequestInterrupt(LCD_INTERRUPT);
+        coincidenceRequested = true;
     }
 
     private void DrawScanLine()
     {
+        if (!lastFrameEnabled) return;
+
         var lcdControl = _mmu.LCDControl;
         if (Bits.Is(lcdControl, 0)) RenderBackground();
+        if (Bits.Is(lcdControl, 5)) RenderWindow();
         if (Bits.Is(lcdControl, 1)) RenderSprites();
     }
 
     private void RenderBackground()
     {
+        var lcdControl = _mmu.LCDControl;
+        var lcdControlY = _mmu.LCDControlY;
+
+        var backgroundTilemapY = (lcdControlY + _mmu.ScrollY) / 8 * 32;
+        backgroundTilemapY %= 1024;
+
+        for (int i = 0; i < GameBoySystem.ScreenWidth; i++)
+        {
+            var backgroundTilemapX = (_mmu.ScrollX + i) / 8;
+            backgroundTilemapX %= 32;
+
+            var backgroundTilemapIndex = (ushort)((Bits.Is(lcdControl, 3) ? 0x9C00 : 0x9800) + backgroundTilemapX + backgroundTilemapY);
+            var backgroundTileDataIndex = TileDataAddress;
+
+            backgroundTileDataIndex += (ushort)(IsSignedAddress
+                ? ((sbyte)_mmu.ReadByte(backgroundTilemapIndex) + 128) * 16
+                : _mmu.ReadByte(backgroundTilemapIndex) * 16);
+
+            var currentTileLine = (lcdControlY + _mmu.ScrollY) % 8 * 2;
+            var currentTileColumn = -((_mmu.ScrollX + i) % 8 - 7);
+
+            var low = _mmu.ReadByte((ushort)(backgroundTileDataIndex + currentTileLine));
+            var high = _mmu.ReadByte((ushort)(backgroundTileDataIndex + currentTileLine + 1));
+
+            var paletteIndex = GetColorIdBits(currentTileColumn, low, high);
+            var index = new NexusColorIndex(GetColorFromPalette(_mmu.BackgroundPalette, paletteIndex));
+            _graphics.DrawPixel(new NexusCoord(i + _offsetX, lcdControlY + _offsetY), new NexusChar(Pixel, index, index));
+        }
+    }
+
+    private void RenderWindow()
+    {
+        var lcdControl = _mmu.LCDControl;
+        var lcdControlY = _mmu.LCDControlY;
+
         var windowX = (byte)(_mmu.WindowX - 7);
-        var windowY = _mmu.WindowY;
-        var lcdControlY = _mmu.LCDControlY;
+        if (!Bits.Is(lcdControl, 5) || _mmu.WindowY > lcdControlY || windowX > GameBoySystem.ScreenWidth) return;
 
-        if (lcdControlY > GameBoySystem.ScreenHeight) return;
+        var windowTilemapY = windowCounter++ / 8 * 32;
 
-        var lcdControl = _mmu.LCDControl;
-        var scrollY = _mmu.ScrollY;
-        var scrollX = _mmu.ScrollX;
-        var backgroundPalette = _mmu.BackgroundPalette;
-        var isWindow = IsWindow(lcdControl, windowY, lcdControlY);
-
-        var y = (byte)(isWindow ? lcdControlY - windowY : lcdControlY + scrollY);
-        var tileLine = (byte)((y & 7) * 2);
-
-        var tileRow = (ushort)(y / 8 * 32);
-        var tileMap = isWindow ? GetWindowTilemapAddress(lcdControl) : GetBackgroundTilemapAddress(lcdControl);
-
-        byte high = 0;
-        byte low = 0;
-        for (int p = 0; p < GameBoySystem.ScreenWidth; p++)
+        for (int i = windowX; i < GameBoySystem.ScreenWidth; i++)
         {
-            var x = (byte)(isWindow && p >= windowX ? p - windowX : p + scrollX);
-            if ((p & 0x07) == 0 || ((p + scrollX) & 0x07) == 0)
-            {
-                var tileColumn = (ushort)(x / 8);
-                var tileAddress = (ushort)(tileMap + tileRow + tileColumn);
+            var windowTilemapX = (i - windowX) / 8;
 
-                var tileLocation = IsSignedAddress(lcdControl)
-                    ? (ushort)(GetTileDataAddress(lcdControl) + _mmu.ReadVRAM(tileAddress) * 16)
-                    : (ushort)(GetTileDataAddress(lcdControl) + ((sbyte)_mmu.ReadVRAM(tileAddress) + 128) * 16);
+            var windowTilemapIndex = (ushort)((Bits.Is(lcdControl, 6) ? 0x9C00 : 0x9800) + windowTilemapX + windowTilemapY);
+            var windowTileDataIndex = TileDataAddress;
 
-                low = _mmu.ReadVRAM((ushort)(tileLocation + tileLine));
-                high = _mmu.ReadVRAM((ushort)(tileLocation + tileLine + 1));
-            }
+            windowTileDataIndex += (ushort)(IsSignedAddress
+                ? ((sbyte)_mmu.ReadByte(windowTilemapIndex) + 128) * 16
+                : _mmu.ReadByte(windowTilemapIndex) * 16);
 
-            var colorIdThroughtPalette = GetColorIdThroughtPalette(backgroundPalette, GetColorIdBits(7 - (x & 7), low, high));
-            _graphics.DrawPixel(new NexusCoord(p + _offsetX, lcdControlY + _offsetY), new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette), new NexusColorIndex(colorIdThroughtPalette)));
+            var currentTileLine = (lcdControlY - _mmu.WindowY) % 8 * 2;
+            var currentTileColumn = -((i - windowX) % 8 - 7);
+
+            var low = _mmu.ReadByte((ushort)(windowTileDataIndex + currentTileLine));
+            var high = _mmu.ReadByte((ushort)(windowTileDataIndex + currentTileLine + 1));
+
+            var paletteIndex = GetColorIdBits(currentTileColumn, low, high);
+            var index = new NexusColorIndex(GetColorFromPalette(_mmu.BackgroundPalette, paletteIndex));
+            _graphics.DrawPixel(new NexusCoord(i + _offsetX, lcdControlY + _offsetY), new NexusChar(Pixel, index, index));
         }
     }
 
-    private void RenderSprites()
+    private unsafe void RenderSprites()
     {
+        const int MaxSprites = 10;
+
         var lcdControlY = _mmu.LCDControlY;
 
-        if (lcdControlY > GameBoySystem.ScreenHeight) return;
+        var sprites = stackalloc Sprite[MaxSprites];
 
-        var lcdControl = _mmu.LCDControl;
-        for (int i = 0x9C; i >= 0; i -= 4)
+        var spriteCount = 0;
+        for (ushort i = 0; i < 40 && spriteCount < MaxSprites; i++)
         {
-            var y = _mmu.ReadOAM(i) - 16;
-            var x = _mmu.ReadOAM(i + 1) - 8;
-            var tile = _mmu.ReadOAM(i + 2);
-            var attribute = _mmu.ReadOAM(i + 3);
+            var oamSpriteAddress = (ushort)(0xFE00 + i * 4);
+            var yPosition = (short)(_mmu.ReadByte(oamSpriteAddress) - 16);
 
-            if (lcdControlY >= y && lcdControlY < y + SpriteSize(lcdControl))
+            if (lcdControlY < yPosition || lcdControlY >= yPosition + SpriteSize) continue;
+
+            var spriteAddress = oamSpriteAddress++;
+            var xPosition = (short)(_mmu.ReadByte(oamSpriteAddress++) - 8);
+            var tileNumber = _mmu.ReadByte(oamSpriteAddress++);
+            var attributes = _mmu.ReadByte(oamSpriteAddress);
+
+            if (SpriteSize == 16) tileNumber &= 0xFE;
+
+            sprites[spriteCount++] = new Sprite(spriteAddress, xPosition, yPosition, tileNumber, attributes);
+        }
+
+        for (int i = 1; i < spriteCount; i++)
+        {
+            var key = sprites[i];
+            var j = i - 1;
+
+            while (j >= 0 && (sprites[j].PosX < key.PosX || sprites[j].PosX == key.PosX && sprites[j].OamAddress < key.OamAddress))
             {
-                var palette = Bits.Is(attribute, 4) ? _mmu.ObjectPalette1 : _mmu.ObjectPalette0;
+                sprites[j + 1] = sprites[j];
+                j--;
+            }
 
-                var tileRow = IsYFlipped(attribute) ? SpriteSize(lcdControl) - 1 - (lcdControlY - y) : (lcdControlY - y);
+            sprites[j + 1] = key;
+        }
 
-                var tileAddress = (ushort)(0x8000 + tile * 16 + tileRow * 2);
-                var low = _mmu.ReadVRAM(tileAddress);
-                var high = _mmu.ReadVRAM((ushort)(tileAddress + 1));
+        for (int i = 0; i < spriteCount; i++)
+        {
+            ref var sprite = ref sprites[i];
 
-                for (int p = 0; p < 8; p++)
+            var attributes = sprite.Attributes;
+            var spriteLine = lcdControlY - sprite.PosY;
+
+            if (Bits.Is(attributes, 6))
+            {
+                spriteLine -= SpriteSize - 1;
+                spriteLine = -spriteLine;
+            }
+
+            spriteLine *= 2;
+
+            var spriteDataAddress = (ushort)(0x8000 + spriteLine + sprite.TileNumber * 16);
+            var spriteDataLow = _mmu.ReadByte(spriteDataAddress++);
+            var spriteDataHigh = _mmu.ReadByte(spriteDataAddress);
+
+            for (int spritePixelIndex = 7; spritePixelIndex >= 0; spritePixelIndex--)
+            {
+                var paletteIndex = GetColorIdBits(spritePixelIndex, spriteDataLow, spriteDataHigh);
+
+                if (paletteIndex == 0) continue;
+
+                var colorId = GetColorFromPalette(Bits.Is(attributes, 4) ? _mmu.ObjectPalette1 : _mmu.ObjectPalette0, paletteIndex);
+
+                var spriteDataIndex = spritePixelIndex;
+
+                if (!Bits.Is(attributes, 5))
                 {
-                    var colorId = GetColorIdBits(IsXFlipped(attribute) ? p : 7 - p, low, high);
-                    var colorIdThroughtPalette = GetColorIdThroughtPalette(palette, colorId);
-
-                    if (x + p >= 0 && x + p < GameBoySystem.ScreenWidth)
-                    {
-                        var coord = new NexusCoord(x + p + _offsetX, lcdControlY + _offsetY);
-
-                        if (!IsTransparent(colorId) && (IsAboveBackground(attribute) || IsBackgroundWhite(_mmu.BackgroundPalette, coord)))
-                            _graphics.DrawPixel(coord, new NexusChar(Pixel, new NexusColorIndex(colorIdThroughtPalette), new NexusColorIndex(colorIdThroughtPalette)));
-                    }
+                    spriteDataIndex -= 7;
+                    spriteDataIndex = -spriteDataIndex;
                 }
+
+                var bufferXIndex = sprite.PosX + spriteDataIndex;
+
+                if (bufferXIndex is < GameBoySystem.ScreenWidth and >= 0 && lcdControlY < GameBoySystem.ScreenHeight)
+                {
+                    var coord = new NexusCoord(bufferXIndex + _offsetX, lcdControlY + _offsetY);
+
+                    if (Bits.Is(attributes, 7))
+                    {
+                        if (_graphics.GetPixel(coord).Foreground != (_mmu.BackgroundPalette & 0x03)) continue;
+                    }
+
+                    var index = new NexusColorIndex(colorId);
+                    _graphics.DrawPixel(coord, new NexusChar(Pixel, index, index));
+                }                
             }
         }
     }
 
-    private void ChangeSTATMode(in int mode)
+    private void SetSTAT()
     {
-        var stat = (byte)(_mmu.LCDControlStatus & ~0x03);
-        _mmu.LCDControlStatus = (byte)(stat | mode);
+        if (_mmu.LCDControlY >= GameBoySystem.ScreenHeight)
+        {
+            SetMode(1);
 
-        if (mode == 0 && Bits.Is(stat, 3) || mode == 1 && Bits.Is(stat, 4) || mode == 2 && Bits.Is(stat, 5))
-            _mmu.RequestInterrupt(LCD_INTERRUPT);
+            mode0Requested = false;
+            mode2Requested = false;
+
+            if (Bits.Is(_mmu.LCDControlStatus, 4) && !mode1Requested)
+            {
+                _mmu.RequestInterrupt(LCD_INTERRUPT);
+                mode1Requested = true;
+            }
+
+            if (!vBlankRequested)
+            {
+                _mmu.RequestInterrupt(VBLANK_INTERRUPT);
+                vBlankRequested = true;
+            }
+
+            if (_mmu.LCDControlY <= 153) return;
+
+            vBlankRequested = false;
+
+            _mmu.LCDControlY = 0;
+            scanlineCounter = 0;
+            windowCounter = 0;
+
+            lastFrameEnabled = IsLcdEnabled;
+            _graphics.Render();
+        }
+        else
+        {
+            switch (scanlineCounter)
+            {
+                case < 80:
+                    SetMode(2);
+
+                    mode0Requested = false;
+                    mode1Requested = false;
+
+                    if (!Bits.Is(_mmu.LCDControlStatus, 5) || mode2Requested) return;
+
+                    _mmu.RequestInterrupt(LCD_INTERRUPT);
+                    mode2Requested = true;
+                    break;
+                case < 390:
+                    SetMode(3);
+
+                    mode0Requested = false;
+                    mode1Requested = false;
+                    mode2Requested = false;
+                    break;
+                default:
+                    SetMode(0);
+
+                    mode1Requested = false;
+                    mode2Requested = false;
+
+                    if (!Bits.Is(_mmu.LCDControlStatus, 3) || mode0Requested) return;
+
+                    _mmu.RequestInterrupt(LCD_INTERRUPT);
+                    mode0Requested = true;
+                    break;
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsBackgroundWhite(in byte backgroundPalette, in NexusCoord coord) => _graphics.GetPixel(coord).Foreground == (backgroundPalette & 0x03);
+    private void SetMode(in byte value)
+    {
+        _mmu.LCDControlStatus &= 0b1111_1100;
+        _mmu.LCDControlStatus |= value;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsLCDEnabled(in byte lcdControl) => Bits.Is(lcdControl, 7);
+    private static byte GetColorIdBits(in int currentTileColumn, in byte low, in byte high)
+        => (byte)(((Bits.Is(high, currentTileColumn) ? 1 : 0) << 1) | (Bits.Is(low, currentTileColumn) ? 1 : 0));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsWindow(in byte lcdControl, in byte windowY, in byte lcdControlY) => Bits.Is(lcdControl, 5) && windowY <= lcdControlY;
+    private static int GetColorFromPalette(in int palette, in int colorId) => (palette >> colorId * 2) & 0x03;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsSignedAddress(in byte lcdControl) => Bits.Is(lcdControl, 4);
+    private readonly ref struct Sprite
+    {
+        public readonly ushort OamAddress;
+        public readonly short PosX;
+        public readonly short PosY;
+        public readonly byte TileNumber;
+        public readonly byte Attributes;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ushort GetBackgroundTilemapAddress(in byte lcdControl) => (ushort)(Bits.Is(lcdControl, 3) ? 0x9C00 : 0x9800);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ushort GetWindowTilemapAddress(in byte lcdControl) => (ushort)(Bits.Is(lcdControl, 6) ? 0x9C00 : 0x9800);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ushort GetTileDataAddress(in byte lcdControl) => (ushort)(Bits.Is(lcdControl, 4) ? 0x8000 : 0x8800);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetColorIdBits(in int colorBit, in byte low, in byte high) => ((high >> colorBit) & 0x01) << 1 | ((low >> colorBit) & 0x01);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetColorIdThroughtPalette(in int palette, in int colorId) => (palette >> colorId * 2) & 0x03;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int SpriteSize(in byte lcdControl) => Bits.Is(lcdControl, 2) ? 16 : 8;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsXFlipped(in byte attribute) => Bits.Is(attribute, 5);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsYFlipped(in byte attribute) => Bits.Is(attribute, 6);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsTransparent(in int bit) => bit == 0;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsAboveBackground(in byte attribute) => attribute >> 7 == 0;
+        public Sprite(scoped in ushort oamAddress, scoped in short x, scoped in short y, scoped in byte tileNumber, scoped in byte attributes)
+        {
+            OamAddress = oamAddress;
+            PosX = x;
+            PosY = y;
+            TileNumber = tileNumber;
+            Attributes = attributes;
+        }
+    }
 }

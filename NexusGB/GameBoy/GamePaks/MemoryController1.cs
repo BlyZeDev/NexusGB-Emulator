@@ -1,7 +1,5 @@
 ﻿namespace NexusGB.GameBoy.GamePaks;
 
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
 public sealed class MemoryController1 : IGamePak
 {
     private const int ROM_OFFSET = 0x4000;

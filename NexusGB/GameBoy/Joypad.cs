@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 public sealed class Joypad
 {
-    private const int JOYPAD_INTERRUPT = 0x04;
+    private const int JOYPAD_INTERRUPT = 4;
     private const byte PAD_MASK = 0x10;
     private const byte BUTTON_MASK = 0x20;
 

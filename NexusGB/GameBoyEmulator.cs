@@ -4,6 +4,7 @@ using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
 using NexusGB.GameBoy;
+using NexusGB.Statics;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
@@ -25,7 +26,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         Settings.ColorPalette = new GameBoyColorPalette();
         Settings.Font = new NexusFont("Consolas", new NexusSize(8));
-        Settings.Title = "NexusGB";
         Settings.ForceStopKey = NexusKey.Escape;
 
         _soundOut = new WindowsSoundOut
@@ -42,6 +42,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _timer = new Timer(_mmu, _spu);
         _ppu = new PixelProcessor(Graphic, _mmu, BufferSize.Width, BufferSize.Height);
         _joypad = new Joypad(_mmu);
+
+        Settings.Title = $"NexusGB - {_mmu.GameTitle}";
     }
 
     protected override void Load()
@@ -57,21 +59,22 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         {
             accumulatedTime -= 16742706;
 
-            Input.UpdateGamepads();
-            Input.Update();
-            _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
-
             while (cyclesThisUpdate < GameBoySystem.CyclesPerUpdate)
             {
                 cpuCycles = _cpu.Execute();
                 cyclesThisUpdate += cpuCycles;
 
-                _timer.Update(cpuCycles);
                 _ppu.Update(cpuCycles);
+                _timer.Update(cpuCycles);
                 _spu.Update(cpuCycles);
                 _joypad.Update();
+
                 HandleInterrupts();
             }
+
+            Input.UpdateGamepads();
+            Input.Update();
+            _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
@@ -88,6 +91,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         _soundOut.Dispose();
         _rpc.Dispose();
+
+        Logger.Dispose();
     }
 
     private void HandleInterrupts()

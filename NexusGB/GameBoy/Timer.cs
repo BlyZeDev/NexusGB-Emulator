@@ -23,19 +23,18 @@ public sealed class Timer
     public void Update(in int cycles)
     {
         HandleDivider(cycles);
-        HandleTimer(cycles);
+        if (_mmu.TimerControlEnabled) HandleTimer(cycles);
     }
 
     private void HandleDivider(in int cycles)
     {
-        var prevDivider = _mmu.Divider;
-
         divCounter += cycles;
-        while (divCounter >= DMG_DIV_FREQ)
-        {
-            _mmu.Divider++;
-            divCounter -= DMG_DIV_FREQ;
-        }
+        if (divCounter < DMG_DIV_FREQ) return;
+
+        divCounter -= DMG_DIV_FREQ;
+
+        var prevDivider = _mmu.Divider;
+        _mmu.Divider++;
 
         if ((prevDivider & 0b0001_0000) != 0 && (_mmu.Divider & 0b0001_0000) == 0)
         {
@@ -45,19 +44,17 @@ public sealed class Timer
 
     private void HandleTimer(in int cycles)
     {
-        if (!_mmu.TimerControlEnabled) return;
+        var counterCycles = timerCounter -= cycles;
+        if (counterCycles > 0) return;
 
-        timerCounter += cycles;
-        while (timerCounter >= _timerControlFrequencies[_mmu.TimerControlFrequency])
-        {
-            _mmu.TimerCounter++;
-            timerCounter -= _timerControlFrequencies[_mmu.TimerControlFrequency];
-        }
+        timerCounter = _timerControlFrequencies[_mmu.TimerControlFrequency];
+        HandleTimer(-counterCycles);
 
         if (_mmu.TimerCounter == 0xFF)
         {
-            _mmu.RequestInterrupt(TIMER_INTERRUPT);
             _mmu.TimerCounter = _mmu.TimerModulo;
+            _mmu.RequestInterrupt(TIMER_INTERRUPT);
         }
+        else _mmu.TimerCounter++;
     }
 }

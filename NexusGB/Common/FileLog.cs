@@ -23,6 +23,8 @@ public sealed class FileLog : IDisposable
         _messageTask = Task.Factory.StartNew(MessageThread, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
+    public void Log(LogMessage message) => _messages.Enqueue(message);
+
     public void Dispose()
     {
         GC.SuppressFinalize(this);

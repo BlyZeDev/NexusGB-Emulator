@@ -2,6 +2,7 @@
 
 using NexusGB.GameBoy.GamePaks;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 public sealed class MemoryManagement
 {
@@ -41,10 +42,14 @@ public sealed class MemoryManagement
 
     public ref byte JoystickPad => ref _io[0x00];
 
-    private MemoryManagement(IGamePak gamepak, SoundProcessor spu)
+    public string GameTitle { get; }
+
+    private MemoryManagement(IGamePak gamepak, SoundProcessor spu, string title)
     {
         _gamepak = gamepak;
         _spu = spu;
+
+        GameTitle = title;
 
         _vram = new byte[8192];
         _wram0 = new byte[4096];
@@ -89,7 +94,7 @@ public sealed class MemoryManagement
             <= 0xEFFF => _wram0[address & 0xFFF],
             <= 0xFDFF => _wram1[address & 0xFFF],
             <= 0xFE9F => _oam[address - 0xFE00],
-            <= 0xFEFF => 0x00,
+            <= 0xFEFF => 0xFF,
             >= 0xFF10 and < 0xFF40 => _spu.ReadByte(address),
             <= 0xFF7F => _io[address & 0x7F],
             _ => _hram[address & 0x7F]
@@ -107,7 +112,7 @@ public sealed class MemoryManagement
             case <= 0xDFFF: _wram1[address & 0xFFF] = value; break;
             case <= 0xEFFF: _wram0[address & 0xFFF] = value; break;
             case <= 0xFDFF: _wram1[address & 0xFFF] = value; break;
-            case <= 0xFE9F: _oam[address & 0x9F] = value; break;
+            case <= 0xFE9F: _oam[address - 0xFE00] = value; break;
             case <= 0xFEFF: break;
             case >= 0xFF10 and < 0xFF40: _spu.WriteByte(address, value); break;
             case <= 0xFF7F:
@@ -132,10 +137,6 @@ public sealed class MemoryManagement
         WriteByte(address, (byte)word);
     }
 
-    public byte ReadVRAM(in int address) => _vram[address & 0x1FFF];
-
-    public byte ReadOAM(in int address) => _oam[address];
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RequestInterrupt(in byte value) => Bits.Set(ref InterruptFlag, value);
 
@@ -151,9 +152,12 @@ public sealed class MemoryManagement
         return value;
     }
 
-    public static MemoryManagement LoadGamePak(string filepath, SoundProcessor spu)
+    public static unsafe MemoryManagement LoadGamePak(string filepath, SoundProcessor spu)
     {
         var rom = File.ReadAllBytes(filepath);
+
+        Span<byte> title = stackalloc byte[16];
+        rom.AsSpan(0x134, title.Length).CopyTo(title);
 
         return new MemoryManagement(rom[0x147] switch
         {
@@ -163,6 +167,6 @@ public sealed class MemoryManagement
             0x0F or 0x10 or 0x11 or 0x12 or 0x13 => new MemoryController3(rom),
             0x19 or 0x1A or 0x1B => new MemoryController5(rom),
             _ => throw new NotSupportedException($"MBC not supported: {rom[0x147]:X2}")
-        }, spu);
+        }, spu, Encoding.ASCII.GetString(title));
     }
 }
