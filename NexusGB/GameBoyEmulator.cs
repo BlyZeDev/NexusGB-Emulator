@@ -8,6 +8,8 @@ using NexusGB.Statics;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
+    private readonly string _romSavePath;
+
     private readonly WindowsSoundOut _soundOut;
     private readonly DiscordRpc _rpc;
 
@@ -22,8 +24,10 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private int cpuCycles;
     private int cyclesThisUpdate;
 
-    public GameBoyEmulator(string rom)
+    public GameBoyEmulator(string romPath, string romSavePath)
     {
+        _romSavePath = romSavePath;
+
         Settings.ColorPalette = new GameBoyColorPalette();
         Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.ForceStopKey = NexusKey.Escape;
@@ -34,23 +38,20 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         };
 
         _rpc = DiscordRpc.Initialize();
-        _rpc.SetMenu();
 
         _spu = new SoundProcessor(_soundOut);
-        _mmu = MemoryManagement.LoadGamePak(rom, _spu);
+        _mmu = MemoryManagement.LoadGamePak(romPath, _romSavePath, _spu);
         _cpu = new Processor(_mmu);
         _timer = new Timer(_mmu, _spu);
         _ppu = new PixelProcessor(Graphic, _mmu, BufferSize.Width, BufferSize.Height);
         _joypad = new Joypad(_mmu);
 
+        _rpc.SetGame(_mmu.GameTitle);
         Settings.Title = $"NexusGB - {_mmu.GameTitle}";
     }
 
-    protected override void Load()
-    {
-        
-    }
-    
+    protected override void Load() => Logger.LogInfo("Initialization completed successfully");
+
     protected override void Update()
     {
         accumulatedTime += DeltaTime * 1_000_000_000;
@@ -82,6 +83,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     protected override void OnCrash(Exception exception)
     {
+        Logger.LogCritical("The emulator crashed unexpectedly", exception);
+
 #if !DEBUG
         Utility.ShowAlert("Error", $"An error occured:\n{exception}", NexusAlertIcon.Error);
 #endif
@@ -89,10 +92,10 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     protected override void CleanUp()
     {
+        _mmu.SaveGame(_romSavePath);
+
         _soundOut.Dispose();
         _rpc.Dispose();
-
-        Logger.Dispose();
     }
 
     private void HandleInterrupts()

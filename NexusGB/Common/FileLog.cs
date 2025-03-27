@@ -13,7 +13,7 @@ public sealed class FileLog : IDisposable
 
     public FileLog(string path)
     {
-        _writer = new StreamWriter(File.Open(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+        _writer = new StreamWriter(File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read))
         {
             AutoFlush = true
         };
@@ -29,9 +29,12 @@ public sealed class FileLog : IDisposable
     {
         GC.SuppressFinalize(this);
 
-        _writer.Dispose();
         _cts.Cancel();
         _cts.Dispose();
+
+        _messageTask.GetAwaiter().GetResult();
+
+        _writer.Dispose();
         _messageTask.Dispose();
     }
 

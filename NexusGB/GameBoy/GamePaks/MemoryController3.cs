@@ -27,6 +27,8 @@ public sealed class MemoryController3 : IGamePak
         romBank = 1;
     }
 
+    public void LoadSave(byte[] eram) => Buffer.BlockCopy(eram, 0, _eram, 0, eram.Length);
+
     public byte ReadERAM(in ushort address)
     {
         if (!eramEnabled) return 0xFF;
@@ -86,4 +88,6 @@ public sealed class MemoryController3 : IGamePak
                 break;
         }
     }
+
+    public void SaveTo(string filepath) => File.WriteAllBytes(filepath, _eram);
 }

@@ -27,7 +27,7 @@ public static class Logger
 
     private static void Log(in LogLevel logLevel, string message, Exception? exception)
     {
-        if (logLevel > LogLevel) return;
+        if (logLevel < LogLevel) return;
 
         _logger.Log(new LogMessage
         {

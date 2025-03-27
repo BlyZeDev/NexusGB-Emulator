@@ -22,6 +22,8 @@ public sealed class MemoryController5 : IGamePak
         romBankLow = 1;
     }
 
+    public void LoadSave(byte[] eram) => Buffer.BlockCopy(eram, 0, _eram, 0, eram.Length);
+
     public byte ReadERAM(in ushort address)
         => eramEnabled ? _eram[ERAM_OFFSET * ramBank + (address & 0x1FFF)] : (byte)0xFF;
 
@@ -45,4 +47,6 @@ public sealed class MemoryController5 : IGamePak
             case < 0x5FFF: ramBank = value & 0x0F; break;
         }
     }
+
+    public void SaveTo(string filepath) => File.WriteAllBytes(filepath, _eram);
 }

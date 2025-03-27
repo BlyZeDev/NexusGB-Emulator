@@ -9,7 +9,7 @@ public static class RomFileHandler
         var ofn = new OpenFileName
         {
             lStructSize = Marshal.SizeOf<OpenFileName>(),
-            lpstrFilter = "GameBoy (*.gb)\0*.gb\0GameBoy Color (*.gbc)\0*.gbc\0",
+            lpstrFilter = "GameBoy (*.gb)\0*.gb\0",
             lpstrCustomFilter = null!,
             nMaxCustFilter = 0,
             nFilterIndex = 1,
@@ -18,7 +18,7 @@ public static class RomFileHandler
             lpstrFileTitle = null!,
             nMaxFileTitle = 0,
             lpstrInitialDir = initialDirectory,
-            lpstrTitle = "Open GameBoy or GameBoy Color Rom",
+            lpstrTitle = "Open a GameBoy Rom",
             Flags = 0x00080000 | 0x00001000,
             nFileOffset = 0,
             nFileExtension = 0,

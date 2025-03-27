@@ -9,6 +9,8 @@ public sealed class MemoryManagement
     private readonly IGamePak _gamepak;
     private readonly SoundProcessor _spu;
 
+    private readonly bool _supportsSaving;
+
     private readonly byte[] _vram;
     private readonly byte[] _wram0;
     private readonly byte[] _wram1;
@@ -44,10 +46,13 @@ public sealed class MemoryManagement
 
     public string GameTitle { get; }
 
-    private MemoryManagement(IGamePak gamepak, SoundProcessor spu, string title)
+    private MemoryManagement(IGamePak gamepak, byte[]? eram, SoundProcessor spu, string title)
     {
         _gamepak = gamepak;
         _spu = spu;
+        _supportsSaving = eram is not null;
+
+        if (_supportsSaving) _gamepak.LoadSave(eram!);
 
         GameTitle = title;
 
@@ -140,6 +145,11 @@ public sealed class MemoryManagement
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RequestInterrupt(in byte value) => Bits.Set(ref InterruptFlag, value);
 
+    public void SaveGame(string filepath)
+    {
+        if (_supportsSaving) _gamepak.SaveTo(filepath);
+    }
+
     private byte DirectMemoryAccess(in byte value)
     {
         var address = (ushort)(value << 8);
@@ -152,21 +162,25 @@ public sealed class MemoryManagement
         return value;
     }
 
-    public static unsafe MemoryManagement LoadGamePak(string filepath, SoundProcessor spu)
+    public static MemoryManagement LoadGamePak(string filepath, string saveFilepath, SoundProcessor spu)
     {
         var rom = File.ReadAllBytes(filepath);
+        var romType = rom[0x147];
+
+        var romSave = romType is 0x03 or 0x06 or 0x0D or 0x10 or 0x13 or 0x1B or 0x1E ? Array.Empty<byte>() : null;
+        if (File.Exists(saveFilepath)) romSave = File.ReadAllBytes(saveFilepath);
 
         Span<byte> title = stackalloc byte[16];
         rom.AsSpan(0x134, title.Length).CopyTo(title);
 
-        return new MemoryManagement(rom[0x147] switch
+        return new MemoryManagement(romType switch
         {
             0x00 => new MemoryController0(rom),
             0x01 or 0x02 or 0x03 => new MemoryController1(rom),
             0x05 or 0x06 => new MemoryController2(rom),
             0x0F or 0x10 or 0x11 or 0x12 or 0x13 => new MemoryController3(rom),
-            0x19 or 0x1A or 0x1B => new MemoryController5(rom),
+            0x19 or 0x1A or 0x1B or 0x1C or 0x1D or 0x1E => new MemoryController5(rom),
             _ => throw new NotSupportedException($"MBC not supported: {rom[0x147]:X2}")
-        }, spu, Encoding.ASCII.GetString(title));
+        }, romSave, spu, Encoding.ASCII.GetString(title));
     }
 }
