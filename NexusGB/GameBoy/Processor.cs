@@ -619,6 +619,21 @@ public sealed class Processor
         return cycles;
     }
 
+    public void HandleInterrupts()
+    {
+        var ief = _mmu.InterruptEnable & _mmu.InterruptFlag;
+
+        for (int i = 0; i < 5; i++)
+        {
+            if (((ief >> i) & 0x01) == 1)
+            {
+                ExecuteInterrupt(i);
+            }
+        }
+
+        UpdateIme();
+    }
+
     private void PrefixCB(in byte opCode)
     {
         switch (opCode)

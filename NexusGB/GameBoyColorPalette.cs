@@ -3,28 +3,26 @@
 using ConsoleNexusEngine.Graphics;
 using System.Collections.Immutable;
 
+[IgnoreColorPalette]
 public sealed record GameBoyColorPalette : NexusColorPalette
 {
-    protected override ImmutableArray<NexusColor> Colors { get; } =
-    [
-        new NexusColor(0xFF, 0xFF, 0xFF),
-        new NexusColor(0x80, 0x80, 0x80),
-        new NexusColor(0x40, 0x40, 0x40),
-        new NexusColor(0x00, 0x00, 0x00),
+    public GameBoyColorPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4)
+        : base(GetPalette(color1, color2, color3, color4)) { }
 
-        new NexusColor(0x01, 0x00, 0x00),
-        new NexusColor(0x02, 0x00, 0x00),
-        new NexusColor(0x03, 0x00, 0x00),
-        new NexusColor(0x04, 0x00, 0x00),
+    private static ImmutableArray<NexusColor> GetPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4)
+    {
+        var builder = ImmutableArray.CreateBuilder<NexusColor>(MaxColorCount);
 
-        new NexusColor(0x05, 0x00, 0x00),
-        new NexusColor(0x06, 0x00, 0x00),
-        new NexusColor(0x07, 0x00, 0x00),
-        new NexusColor(0x08, 0x00, 0x00),
+        builder.Add(color1);
+        builder.Add(color2);
+        builder.Add(color3);
+        builder.Add(color4);
 
-        new NexusColor(0x09, 0x00, 0x00),
-        new NexusColor(0x10, 0x00, 0x00),
-        new NexusColor(0x11, 0x00, 0x00),
-        new NexusColor(0x12, 0x00, 0x00),
-    ];
+        for (int i = 0; i < MaxColorCount - 4; i++)
+        {
+            builder.Add(color1);
+        }
+
+        return builder.MoveToImmutable();
+    }
 }

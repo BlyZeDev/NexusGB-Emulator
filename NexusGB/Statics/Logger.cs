@@ -4,7 +4,7 @@ using NexusGB.Common;
 
 public static class Logger
 {
-    private static readonly string LogFilePath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location) ?? Environment.CurrentDirectory, "Logs.log");
+    private static readonly string _logFilePath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly()?.Location) ?? Environment.CurrentDirectory, "Logs.log");
 
     private static readonly FileLog _logger;
 
@@ -12,7 +12,7 @@ public static class Logger
 
     static Logger()
     {
-        _logger = new FileLog(LogFilePath);
+        _logger = new FileLog(_logFilePath);
         LogLevel = LogLevel.Info;
     }
 

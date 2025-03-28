@@ -3,12 +3,14 @@
 using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
+using NexusGB.Common;
 using NexusGB.GameBoy;
 using NexusGB.Statics;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
     private readonly string _romSavePath;
+    private readonly ConfigurationWatcher _watcher;
 
     private readonly WindowsSoundOut _soundOut;
     private readonly DiscordRpc _rpc;
@@ -27,8 +29,12 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     public GameBoyEmulator(string romPath, string romSavePath)
     {
         _romSavePath = romSavePath;
+        _watcher = new ConfigurationWatcher();
 
-        Settings.ColorPalette = new GameBoyColorPalette();
+        _watcher.Changed += OnConfigChange;
+
+        var current = _watcher.Current;
+        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4);
         Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.ForceStopKey = NexusKey.Escape;
 
@@ -50,7 +56,12 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         Settings.Title = $"NexusGB - {_mmu.GameTitle}";
     }
 
-    protected override void Load() => Logger.LogInfo("Initialization completed successfully");
+    protected override void Load()
+    {
+        Logger.LogInfo("Initialization completed successfully");
+
+        Graphic.DrawShape(NexusCoord.MinValue, new NexusRectangle(NexusCoord.MinValue, BufferSize.ToCoord(), new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true));
+    }
 
     protected override void Update()
     {
@@ -70,7 +81,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
                 _spu.Update(cpuCycles);
                 _joypad.Update();
 
-                HandleInterrupts();
+                _cpu.HandleInterrupts();
             }
 
             Input.UpdateGamepads();
@@ -98,18 +109,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _rpc.Dispose();
     }
 
-    private void HandleInterrupts()
+    private void OnConfigChange(object? sender, EmulatorConfig old)
     {
-        var ief = _mmu.InterruptEnable & _mmu.InterruptFlag;
-
-        for (int i = 0; i < 5; i++)
-        {
-            if (((ief >> i) & 0x01) == 1)
-            {
-                _cpu.ExecuteInterrupt(i);
-            }
-        }
-
-        _cpu.UpdateIme();
+        var current = _watcher.Current;
+        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4);
     }
 }
