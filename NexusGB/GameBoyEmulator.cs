@@ -86,14 +86,17 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
             Input.UpdateGamepads();
             Input.Update();
-            _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
+            _joypad.HandleInputs(_watcher.Current.Controls, Input.Gamepad1, Input.Keys);
 
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
+
+        Graphic.DrawText(NexusCoord.MinValue, new NexusText($"{FramesPerSecond} FPS   ", NexusColorIndex.Background, NexusColorIndex.Color15));
     }
 
     protected override void OnCrash(Exception exception)
     {
+        CleanUp();
         Logger.LogCritical("The emulator crashed unexpectedly", exception);
 
 #if !DEBUG

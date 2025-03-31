@@ -35,8 +35,8 @@ public sealed class PixelProcessor
         _graphics = graphics;
         _mmu = mmu;
 
-        _offsetX = (pixelCountX - GameBoySystem.ScreenWidth) / 4;
-        _offsetY = (pixelCountY - GameBoySystem.ScreenHeight) / 4;
+        _offsetX = (pixelCountX - GameBoySystem.ScreenWidth) / 2;
+        _offsetY = (pixelCountY - GameBoySystem.ScreenHeight) / 2;
     }
 
     public void Update(in int cycles)

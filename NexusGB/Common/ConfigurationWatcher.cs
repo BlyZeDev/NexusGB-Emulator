@@ -1,6 +1,7 @@
 ﻿namespace NexusGB.Common;
 
 using ConsoleNexusEngine.Graphics;
+using ConsoleNexusEngine.IO;
 using System.Reflection;
 using System.Text.Json;
 
@@ -16,7 +17,18 @@ public sealed class ConfigurationWatcher : IDisposable
         Color1 = new NexusColor(0xFF, 0xFF, 0xFF),
         Color2 = new NexusColor(0x80, 0x80, 0x80),
         Color3 = new NexusColor(0x40, 0x40, 0x40),
-        Color4 = new NexusColor(0x00, 0x00, 0x00)
+        Color4 = new NexusColor(0x00, 0x00, 0x00),
+        Controls = new Dictionary<NexusKey, byte>
+        {
+            { NexusKey.Up, 0x14 },
+            { NexusKey.Left, 0x12 },
+            { NexusKey.Right, 0x11 },
+            { NexusKey.Down, 0x18 },
+            { NexusKey.A, 0x21 },
+            { NexusKey.B, 0x22 },
+            { NexusKey.Back, 0x24 },
+            { NexusKey.Return, 0x28 }
+        }
     };
 
     private readonly FileSystemWatcher _watcher;

@@ -18,10 +18,12 @@ public sealed record GameBoyColorPalette : NexusColorPalette
         builder.Add(color3);
         builder.Add(color4);
 
-        for (int i = 0; i < MaxColorCount - 4; i++)
+        for (int i = 0; i < MaxColorCount - 5; i++)
         {
             builder.Add(color1);
         }
+
+        builder.Add(NexusColor.Black);
 
         return builder.MoveToImmutable();
     }

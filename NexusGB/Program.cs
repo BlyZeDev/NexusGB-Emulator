@@ -15,14 +15,20 @@ sealed class Program
             return;
         }
 
-        var romPath = RomFileHandler.OpenRomFile(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
-        if (romPath is null || Path.GetExtension(romPath) != ".gb")
+        string? romPath;
+        while (true)
         {
+            Console.Clear();
+
+            romPath = RomFileHandler.OpenRomFile(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+            if (romPath is not null && Path.GetExtension(romPath) == ".gb") break;
+
             Logger.LogWarning($"Invalid ROM file: {romPath}");
 
-            Console.Write("Invalid Rom file...");
-            Console.ReadKey(true);
-            return;
+            Console.Write("Invalid Rom file!\nPress Escape to close the emulator or any other key to select another file...");
+            var keyInfo = Console.ReadKey(true);
+
+            if (keyInfo.Key is ConsoleKey.Escape) Environment.Exit(0);
         }
 
         using (var emulator = new GameBoyEmulator(romPath, Path.ChangeExtension(romPath, ".sav")))
@@ -30,6 +36,8 @@ sealed class Program
             Logger.LogInfo("Emulator has started");
 
             emulator.Start();
+
+            Logger.LogInfo("Emulator has stopped");
         }
 
         Logger.Dispose();

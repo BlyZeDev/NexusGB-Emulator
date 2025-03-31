@@ -28,12 +28,12 @@ public sealed class Joypad
 
     public Joypad(MemoryManagement mmu) => _mmu = mmu;
 
-    public void HandleInputs(in NexusGamepad gamepad, in ImmutableArray<NexusKey> keys)
+    public void HandleInputs(Dictionary<NexusKey, byte> controls, in NexusGamepad gamepad, in ImmutableArray<NexusKey> keys)
     {
         pad = 0x0F;
         buttons = 0x0F;
 
-        foreach (var key in GetKeyCodes(gamepad, keys))
+        foreach (var key in GetKeyCodes(controls, gamepad, keys))
         {
             if ((key & PAD_MASK) == PAD_MASK)
                 pad = (byte)(pad & ~(key & 0x0F));
@@ -58,13 +58,13 @@ public sealed class Joypad
         if ((joystickPad & 0b00110000) == 0b00110000) _mmu.JoystickPad = 0xFF;
     }
 
-    private static IEnumerable<byte> GetKeyCodes(NexusGamepad gamepad, ImmutableArray<NexusKey> keys)
+    private static IEnumerable<byte> GetKeyCodes(Dictionary<NexusKey, byte> controls, NexusGamepad gamepad, ImmutableArray<NexusKey> keys)
     {
-        if (gamepad.LeftThumbX < -100) yield return _buttonMappings[NexusXInput.DirectionalPadLeft];
-        else if (gamepad.LeftThumbX > 100) yield return _buttonMappings[NexusXInput.DirectionalPadRight];
+        if (gamepad.LeftThumbX < -10_000) yield return _buttonMappings[NexusXInput.DirectionalPadLeft];
+        else if (gamepad.LeftThumbX > 10_000) yield return _buttonMappings[NexusXInput.DirectionalPadRight];
 
-        if (gamepad.LeftThumbY < -100) yield return _buttonMappings[NexusXInput.DirectionalPadUp];
-        else if (gamepad.LeftThumbY > 100) yield return _buttonMappings[NexusXInput.DirectionalPadDown];
+        if (gamepad.LeftThumbY < -10_000) yield return _buttonMappings[NexusXInput.DirectionalPadDown];
+        else if (gamepad.LeftThumbY > 10_000) yield return _buttonMappings[NexusXInput.DirectionalPadUp];
 
         foreach (var button in Enum.GetValues<NexusXInput>())
         {
@@ -74,19 +74,7 @@ public sealed class Joypad
 
         foreach (var key in keys)
         {
-            switch (key)
-            {
-                case NexusKey.Up or NexusKey.W: yield return _buttonMappings[NexusXInput.DirectionalPadUp]; break;
-                case NexusKey.Left or NexusKey.A: yield return _buttonMappings[NexusXInput.DirectionalPadLeft]; break;
-                case NexusKey.Right or NexusKey.D: yield return _buttonMappings[NexusXInput.DirectionalPadRight]; break;
-                case NexusKey.Down or NexusKey.S: yield return _buttonMappings[NexusXInput.DirectionalPadDown]; break;
-
-                case NexusKey.E: yield return _buttonMappings[NexusXInput.ButtonA]; break;
-                case NexusKey.Q: yield return _buttonMappings[NexusXInput.ButtonB]; break;
-
-                case NexusKey.Tab or NexusKey.Back: yield return _buttonMappings[NexusXInput.Back]; break;
-                case NexusKey.Return: yield return _buttonMappings[NexusXInput.Start]; break;
-            }
+            if (controls.TryGetValue(key, out var keyCode)) yield return keyCode;
         }
     }
 }
