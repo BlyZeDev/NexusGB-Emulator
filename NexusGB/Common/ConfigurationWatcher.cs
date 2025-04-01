@@ -2,6 +2,7 @@
 
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
+using NexusGB.Statics;
 using System.Reflection;
 using System.Text.Json;
 
@@ -18,6 +19,7 @@ public sealed class ConfigurationWatcher : IDisposable
         Color2 = new NexusColor(0x80, 0x80, 0x80),
         Color3 = new NexusColor(0x40, 0x40, 0x40),
         Color4 = new NexusColor(0x00, 0x00, 0x00),
+        BackgroundColor = NexusColor.Black,
         Controls = new Dictionary<NexusKey, byte>
         {
             { NexusKey.Up, 0x14 },
@@ -45,7 +47,7 @@ public sealed class ConfigurationWatcher : IDisposable
         var fullPath = Path.Combine(directory, file);
 
         if (!File.Exists(fullPath)) WriteJsonToFile(fullPath, _defaultConfig);
-        Current = ReadJsonFromFile<EmulatorConfig>(fullPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {fullPath}");
+        Current = ReadJsonFromFile(fullPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {fullPath}");
 
         _watcher = new FileSystemWatcher
         {
@@ -64,21 +66,38 @@ public sealed class ConfigurationWatcher : IDisposable
     private void OnConfigChange(object sender, FileSystemEventArgs e)
     {
         var old = Current;
-        Current = ReadJsonFromFile<EmulatorConfig>(e.FullPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {e.FullPath}");
+        Current = ReadJsonFromFile(e.FullPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {e.FullPath}");
         Changed?.Invoke(this, old);
     }
 
     private void OnConfigDeleted(object sender, FileSystemEventArgs e) => WriteJsonToFile(e.FullPath, _defaultConfig);
 
-    private static T? ReadJsonFromFile<T>(string filepath)
+    private static EmulatorConfig ReadJsonFromFile(string filepath)
     {
-        using (var reader = new StreamReader(filepath))
+        try
         {
-            return JsonSerializer.Deserialize<T>(reader.ReadToEnd(), _options);
+            using (var reader = new StreamReader(filepath))
+            {
+                return JsonSerializer.Deserialize<EmulatorConfig>(reader.ReadToEnd(), _options)
+                    ?? throw new JsonException("The deserialization result was null", filepath, null, null);
+            }
         }
+        catch (JsonException jsonEx)
+        {
+            Logger.LogWarning("Couldn't parse the configuration file, maybe it's invalid", jsonEx);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Something went wrong reading the configuration file", ex);
+        }
+
+        Logger.LogWarning("Resetting the configuration file to default");
+
+        File.Delete(filepath);
+        return _defaultConfig;
     }
 
-    private static void WriteJsonToFile<T>(string filepath, T jObject)
+    private static void WriteJsonToFile(string filepath, EmulatorConfig jObject)
     {
         using (var writer = new StreamWriter(filepath))
         {

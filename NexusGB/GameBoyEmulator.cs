@@ -34,7 +34,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _watcher.Changed += OnConfigChange;
 
         var current = _watcher.Current;
-        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4);
+        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
         Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.ForceStopKey = NexusKey.Escape;
 
@@ -115,6 +115,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private void OnConfigChange(object? sender, EmulatorConfig old)
     {
         var current = _watcher.Current;
-        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4);
+        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
     }
 }

@@ -6,10 +6,10 @@ using System.Collections.Immutable;
 [IgnoreColorPalette]
 public sealed record GameBoyColorPalette : NexusColorPalette
 {
-    public GameBoyColorPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4)
-        : base(GetPalette(color1, color2, color3, color4)) { }
+    public GameBoyColorPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4, in NexusColor backgroundColor)
+        : base(GetPalette(color1, color2, color3, color4, backgroundColor)) { }
 
-    private static ImmutableArray<NexusColor> GetPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4)
+    private static ImmutableArray<NexusColor> GetPalette(in NexusColor color1, in NexusColor color2, in NexusColor color3, in NexusColor color4, in NexusColor backgroundColor)
     {
         var builder = ImmutableArray.CreateBuilder<NexusColor>(MaxColorCount);
 
@@ -23,7 +23,7 @@ public sealed record GameBoyColorPalette : NexusColorPalette
             builder.Add(color1);
         }
 
-        builder.Add(NexusColor.Black);
+        builder.Add(backgroundColor);
 
         return builder.MoveToImmutable();
     }
