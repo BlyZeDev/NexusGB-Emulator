@@ -35,8 +35,16 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
         var current = _watcher.Current;
         Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
-        Settings.Font = new NexusFont("Consolas", new NexusSize(8));
         Settings.ForceStopKey = NexusKey.Escape;
+
+        var fontSize = ScreenSize.Height / 100;
+        if (fontSize % 2 != 0) fontSize++;
+
+        do
+        {
+            fontSize -= 2;
+            Settings.Font = new NexusFont("Consolas", new NexusSize(fontSize));
+        } while (BufferSize.Width < GameBoySystem.ScreenWidth || BufferSize.Height < GameBoySystem.ScreenHeight);
 
         _soundOut = new WindowsSoundOut
         {
@@ -108,6 +116,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         _mmu.SaveGame(_romSavePath);
 
+        _watcher.Dispose();
         _soundOut.Dispose();
         _rpc.Dispose();
     }
