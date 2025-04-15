@@ -44,7 +44,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         {
             fontSize -= 2;
             Settings.Font = new NexusFont("Consolas", new NexusSize(fontSize));
-        } while (BufferSize.Width < GameBoySystem.ScreenWidth || BufferSize.Height < GameBoySystem.ScreenHeight);
+        } while (BufferSize.Width <= GameBoySystem.ScreenWidth || BufferSize.Height <= GameBoySystem.ScreenHeight);
 
         _soundOut = new WindowsSoundOut
         {
@@ -68,7 +68,10 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     {
         Logger.LogInfo("Initialization completed successfully");
 
-        Graphic.DrawShape(NexusCoord.MinValue, new NexusRectangle(NexusCoord.MinValue, BufferSize.ToCoord(), new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true));
+        Graphic.DrawShape(NexusCoord.MinValue, new NexusRectangle(BufferSize, new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true));
+        Graphic.DrawLine(new NexusCoord(BufferSize.Width - 5, 0), new NexusCoord(BufferSize.Width - 1, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14));
+        Graphic.DrawLine(new NexusCoord(BufferSize.Width - 1, 0), new NexusCoord(BufferSize.Width - 5, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14));
+        Graphic.Render();
     }
 
     protected override void Update()
@@ -99,17 +102,18 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
 
-        Graphic.DrawText(NexusCoord.MinValue, new NexusText($"{FramesPerSecond} FPS   ", NexusColorIndex.Background, NexusColorIndex.Color15));
+        Graphic.DrawText(NexusCoord.MinValue, new NexusText($"FPS: {FramesPerSecond}", NexusColorIndex.Background, NexusColorIndex.Color15));
     }
 
     protected override void OnCrash(Exception exception)
     {
-        CleanUp();
         Logger.LogCritical("The emulator crashed unexpectedly", exception);
 
 #if !DEBUG
         Utility.ShowAlert("Error", $"An error occured:\n{exception}", NexusAlertIcon.Error);
 #endif
+
+        CleanUp();
     }
 
     protected override void CleanUp()

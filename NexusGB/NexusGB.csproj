@@ -13,7 +13,7 @@
 	</PropertyGroup>
 	
   <ItemGroup>
-    <PackageReference Include="ConsoleNexusEngine" Version="8.2.13" />
+    <PackageReference Include="ConsoleNexusEngine" Version="8.2.15" />
     <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
     <PackageReference Include="SFML.Audio" Version="2.6.1" />
   </ItemGroup>
