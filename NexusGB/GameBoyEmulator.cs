@@ -22,6 +22,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private readonly Timer _timer;
     private readonly Joypad _joypad;
 
+    private readonly NexusSimpleSprite _overlaySprite;
+
     private double accumulatedTime;
     private int cpuCycles;
     private int cyclesThisUpdate;
@@ -62,15 +64,18 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
         _rpc.SetGame(_mmu.GameTitle);
         Settings.Title = $"NexusGB - {_mmu.GameTitle}";
+
+        _overlaySprite = new NexusCompoundSpriteBuilder(new NexusRectangle(BufferSize, new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true), 0)
+            .AddLine(new NexusCoord(BufferSize.Width - 5, 0), new NexusCoord(BufferSize.Width - 1, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
+            .AddLine(new NexusCoord(BufferSize.Width - 5, 4), new NexusCoord(BufferSize.Width - 1, 0), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
+            .Build();
     }
 
     protected override void Load()
     {
         Logger.LogInfo("Initialization completed successfully");
 
-        Graphic.DrawShape(NexusCoord.MinValue, new NexusRectangle(BufferSize, new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true));
-        Graphic.DrawLine(new NexusCoord(BufferSize.Width - 5, 0), new NexusCoord(BufferSize.Width - 1, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14));
-        Graphic.DrawLine(new NexusCoord(BufferSize.Width - 1, 0), new NexusCoord(BufferSize.Width - 5, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14));
+        Graphic.DrawSprite(NexusCoord.MinValue, _overlaySprite);
         Graphic.Render();
     }
 
@@ -123,6 +128,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _watcher.Dispose();
         _soundOut.Dispose();
         _rpc.Dispose();
+    }
+
+    private void ShowSettingsMenu()
+    {
+
     }
 
     private void OnConfigChange(object? sender, EmulatorConfig old)
