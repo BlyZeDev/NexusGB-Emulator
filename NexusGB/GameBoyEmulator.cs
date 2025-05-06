@@ -28,6 +28,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private readonly ClickableSprite _configButton;
     private readonly ClickableSprite _exitButton;
 
+    private bool isPaused;
     private double accumulatedTime;
     private int cpuCycles;
     private int cyclesThisUpdate;
@@ -71,18 +72,18 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
         var configSprite = new NexusFiggleText("Settings", FiggleFonts.OldBanner, NexusColorIndex.Color14, NexusColorIndex.Color15);
         _configButton = new ClickableSprite(Input, configSprite.Map,
-            new NexusCoord(BufferSize.Width - configSprite.Map.Size.Width, BufferSize.Height / configSprite.Map.Size.Height), configSprite.Map.Size);
+            new NexusCoord(BufferSize.Width - configSprite.Map.Size.Width, BufferSize.Height / 2 - configSprite.Map.Size.Height));
         _configButton.MouseOver += OnConfigButtonMouseOver;
 
         var exitButtonMap = new NexusCompoundSpriteBuilder()
             .AddLine(new NexusCoord(BufferSize.Width - 5, 0), new NexusCoord(BufferSize.Width - 1, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
             .AddLine(new NexusCoord(BufferSize.Width - 5, 4), new NexusCoord(BufferSize.Width - 1, 0), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
             .BuildMap();
-        _exitButton = new ClickableSprite(Input, exitButtonMap, new NexusCoord(BufferSize.Width - 5, 0), exitButtonMap.Size);
+        _exitButton = new ClickableSprite(Input, exitButtonMap, new NexusCoord(BufferSize.Width - 5, 0));
         _exitButton.MouseOver += OnExitButtonMouseOver;
 
         _overlaySprite = new NexusCompoundSpriteBuilder(new NexusRectangle(BufferSize, new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true), 0)
-            .AddSprite(new NexusCoord(BufferSize.Width - configSprite.Map.Size.Width, BufferSize.Height / configSprite.Map.Size.Height), _configButton)
+            .AddSprite(_configButton.StartPos, _configButton)
             .AddSprite(_exitButton)
             .Build();
     }
@@ -106,7 +107,18 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     private void OnExitButtonMouseOver(object? sender, EventArgs e)
     {
-        if (Input.Keys.Contains(NexusKey.MouseLeft)) Stop();
+        if (Input.Keys.Contains(NexusKey.MouseLeft))
+        {
+            isPaused = true;
+
+            var isConfirmed = ShowConfirmation("Do you really want to close the emulator?");
+
+            if (isConfirmed) Stop();
+
+            Graphic.DrawSprite(NexusCoord.MinValue, _overlaySprite);
+
+            isPaused = false;
+        }
     }
 
     protected override void Load()
@@ -119,6 +131,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     protected override void Update()
     {
+        if (isPaused) return;
+
         accumulatedTime += DeltaTime * 1_000_000_000;
 
         while (accumulatedTime >= 16742706)
@@ -145,8 +159,6 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
 
-        _configButton.Update();
-        _exitButton.Update();
         Graphic.DrawText(NexusCoord.MinValue, new NexusText($"FPS: {FramesPerSecond}", NexusColorIndex.Background, NexusColorIndex.Color15));
     }
 
@@ -163,13 +175,61 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
     protected override void CleanUp()
     {
+        _configButton.MouseOver -= OnConfigButtonMouseOver;
         _exitButton.MouseOver -= OnExitButtonMouseOver;
+
+        _configButton.Dispose();
+        _exitButton.Dispose();
 
         _mmu.SaveGame(_romSavePath);
 
         _watcher.Dispose();
         _soundOut.Dispose();
         _rpc.Dispose();
+    }
+
+    private bool ShowConfirmation(string text)
+    {
+        var result = false;
+
+        using (var waitSignal = new AutoResetEvent(false))
+        {
+            var message = new NexusFiggleText(text, FiggleFonts.OldBanner, NexusColorIndex.Color15);
+
+            var yesMap = new NexusFiggleText("Yes", FiggleFonts.OldBanner, NexusColorIndex.Color15).Map;
+            var yesPos = new NexusCoord((BufferSize.Width - yesMap.Size.Width) / 4, BufferSize.Height / 2);
+            var yesBtn = new ClickableSprite(Input, yesMap, yesPos);
+            yesBtn.MouseOver += (_, _) =>
+            {
+                if (Input.Keys.Contains(NexusKey.MouseLeft))
+                {
+                    result = true;
+                    waitSignal.Set();
+                }
+            };
+
+            var noMap = new NexusFiggleText("No", FiggleFonts.OldBanner, NexusColorIndex.Color15).Map;
+            var noPos = new NexusCoord((BufferSize.Width - noMap.Size.Width) / 2, BufferSize.Height / 2);
+            var noBtn = new ClickableSprite(Input, noMap, noPos);
+            noBtn.MouseOver += (_, _) =>
+            {
+                if (Input.Keys.Contains(NexusKey.MouseLeft))
+                {
+                    result = false;
+                    waitSignal.Set();
+                }
+            };
+
+            Graphic.Clear();
+            Graphic.DrawSprite(new NexusCoord((BufferSize.Width - message.Map.Size.Width) / 2, BufferSize.Height / 3), message);
+            Graphic.DrawSprite(yesPos, yesBtn);
+            Graphic.DrawSprite(noPos, noBtn);
+            Graphic.Render();
+
+            waitSignal.WaitOne();
+        }
+
+        return result;
     }
 
     private void OnConfigChange(object? sender, EmulatorConfig old)

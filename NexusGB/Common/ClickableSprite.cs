@@ -3,29 +3,39 @@
 using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 
-public sealed class ClickableSprite : INexusSprite
+public sealed class ClickableSprite : INexusSprite, IDisposable
 {
     private readonly NexusConsoleInput _input;
-    private readonly NexusCoord _startPos;
-    private readonly NexusSize _range;
+    private readonly CancellationTokenSource _cts;
 
     public NexusSpriteMap Map { get; }
 
+    public NexusCoord StartPos { get; }
+
     public event EventHandler? MouseOver;
 
-    public ClickableSprite(NexusConsoleInput input, in NexusSpriteMap map, in NexusCoord startPos, in NexusSize range)
+    public ClickableSprite(NexusConsoleInput input, in NexusSpriteMap map, in NexusCoord startPos)
     {
+        _cts = new CancellationTokenSource();
         _input = input;
-        _startPos = startPos;
-        _range = range;
+        StartPos = startPos;
 
         Map = map;
+
+        Task.Factory.StartNew(() =>
+        {
+            while (!_cts.IsCancellationRequested)
+            {
+                _input.Update();
+
+                if (_input.MousePosition.IsInRange(StartPos, Map.Size)) MouseOver?.Invoke(this, EventArgs.Empty);
+            }
+        }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
-    public void Update()
+    public void Dispose()
     {
-        if (!_input.MousePosition.IsInRange(_startPos, _range)) return;
-
-        MouseOver?.Invoke(this, EventArgs.Empty);
+        _cts.Cancel();
+        _cts.Dispose();
     }
 }
