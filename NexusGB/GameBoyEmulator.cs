@@ -3,9 +3,11 @@
 using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
+using Figgle;
 using NexusGB.Common;
 using NexusGB.GameBoy;
 using NexusGB.Statics;
+using System.Diagnostics;
 
 public sealed class GameBoyEmulator : NexusConsoleGame
 {
@@ -23,6 +25,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private readonly Joypad _joypad;
 
     private readonly NexusSimpleSprite _overlaySprite;
+    private readonly ClickableSprite _configButton;
     private readonly ClickableSprite _exitButton;
 
     private double accumulatedTime;
@@ -66,6 +69,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _rpc.SetGame(_mmu.GameTitle);
         Settings.Title = $"NexusGB - {_mmu.GameTitle}";
 
+        var configSprite = new NexusFiggleText("Settings", FiggleFonts.OldBanner, NexusColorIndex.Color14, NexusColorIndex.Color15);
+        _configButton = new ClickableSprite(Input, configSprite.Map,
+            new NexusCoord(BufferSize.Width - configSprite.Map.Size.Width, BufferSize.Height / configSprite.Map.Size.Height), configSprite.Map.Size);
+        _configButton.MouseOver += OnConfigButtonMouseOver;
+
         var exitButtonMap = new NexusCompoundSpriteBuilder()
             .AddLine(new NexusCoord(BufferSize.Width - 5, 0), new NexusCoord(BufferSize.Width - 1, 4), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
             .AddLine(new NexusCoord(BufferSize.Width - 5, 4), new NexusCoord(BufferSize.Width - 1, 0), new NexusChar(' ', NexusColorIndex.Color14, NexusColorIndex.Color14))
@@ -74,8 +82,26 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _exitButton.MouseOver += OnExitButtonMouseOver;
 
         _overlaySprite = new NexusCompoundSpriteBuilder(new NexusRectangle(BufferSize, new NexusChar(' ', NexusColorIndex.Color15, NexusColorIndex.Color15), true), 0)
+            .AddSprite(new NexusCoord(BufferSize.Width - configSprite.Map.Size.Width, BufferSize.Height / configSprite.Map.Size.Height), _configButton)
             .AddSprite(_exitButton)
             .Build();
+    }
+
+    private void OnConfigButtonMouseOver(object? sender, EventArgs e)
+    {
+        if (Input.Keys.Contains(NexusKey.MouseLeft))
+        {
+            using (var process = new Process())
+            {
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = _watcher.ConfigPath,
+                    UseShellExecute = true
+                };
+
+                process.Start();
+            }
+        }
     }
 
     private void OnExitButtonMouseOver(object? sender, EventArgs e)
@@ -119,6 +145,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
         }
 
+        _configButton.Update();
         _exitButton.Update();
         Graphic.DrawText(NexusCoord.MinValue, new NexusText($"FPS: {FramesPerSecond}", NexusColorIndex.Background, NexusColorIndex.Color15));
     }
@@ -145,14 +172,13 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _rpc.Dispose();
     }
 
-    private void ShowSettingsMenu()
-    {
-        
-    }
-
     private void OnConfigChange(object? sender, EmulatorConfig old)
     {
         var current = _watcher.Current;
-        Settings.ColorPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
+
+        var newPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
+        if (Settings.ColorPalette.SequenceEqual(newPalette)) return;
+
+        Settings.ColorPalette = newPalette;
     }
 }

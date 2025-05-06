@@ -30,6 +30,8 @@ public sealed class ConfigurationWatcher : IDisposable
 
     private readonly FileSystemWatcher _watcher;
 
+    public string ConfigPath { get; }
+
     public EmulatorConfig Current { get; private set; }
 
     public event EventHandler<EmulatorConfig>? Changed;
@@ -39,10 +41,10 @@ public sealed class ConfigurationWatcher : IDisposable
         var directory = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ?? Environment.CurrentDirectory;
         var file = "NexusGB.config";
 
-        var fullPath = Path.Combine(directory, file);
+        ConfigPath = Path.Combine(directory, file);
 
-        if (!File.Exists(fullPath)) WriteConfigFile(fullPath, _defaultConfig);
-        Current = ReadConfigFile(fullPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {fullPath}");
+        if (!File.Exists(ConfigPath)) WriteConfigFile(ConfigPath, _defaultConfig);
+        Current = ReadConfigFile(ConfigPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {ConfigPath}");
 
         _watcher = new FileSystemWatcher
         {
