@@ -1,4 +1,4 @@
-﻿namespace NexusGB;
+﻿namespace NexusGB.Common;
 
 using SFML.Audio;
 using SFML.System;
@@ -32,7 +32,7 @@ public sealed class WindowsSoundOut : SoundStream, IDisposable
         samples = new short[SAMPLE_BUFFER_SIZE];
 
         var copySize = _sampleBuffer.Count < SAMPLE_BUFFER_SIZE ? _sampleBuffer.Count : SAMPLE_BUFFER_SIZE;
-        for (int i = 0; i < copySize; i++)
+        for (var i = 0; i < copySize; i++)
         {
             _sampleBuffer.TryDequeue(out samples[i]);
         }

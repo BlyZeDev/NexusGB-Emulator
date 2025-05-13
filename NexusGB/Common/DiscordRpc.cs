@@ -1,4 +1,4 @@
-﻿namespace NexusGB;
+﻿namespace NexusGB.Common;
 
 using DiscordRPC;
 using System.Text;
@@ -80,9 +80,7 @@ public sealed class DiscordRpc : IDisposable
 
         var trimLimit = ByteLimit - Encoding.UTF8.GetByteCount(Ellipsis);
         if (input.Length > trimLimit)
-        {
             input = input[..trimLimit];
-        }
 
         while (Encoding.UTF8.GetByteCount(input) > trimLimit)
         {

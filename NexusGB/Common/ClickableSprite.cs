@@ -1,41 +1,19 @@
 ﻿namespace NexusGB.Common;
 
-using ConsoleNexusEngine;
 using ConsoleNexusEngine.Graphics;
+using ConsoleNexusEngine;
 
-public sealed class ClickableSprite : INexusSprite, IDisposable
+public readonly struct ClickableSprite : INexusSprite
 {
-    private readonly NexusConsoleInput _input;
-    private readonly CancellationTokenSource _cts;
+    public readonly NexusSpriteMap Map { get; }
 
-    public NexusSpriteMap Map { get; }
+    public readonly NexusCoord StartPos { get; }
 
-    public NexusCoord StartPos { get; }
-
-    public event EventHandler? MouseOver;
-
-    public ClickableSprite(NexusConsoleInput input, in NexusSpriteMap map, in NexusCoord startPos)
+    public ClickableSprite(in NexusSpriteMap map, in NexusCoord startPos)
     {
-        _cts = new CancellationTokenSource();
-        _input = input;
         StartPos = startPos;
-
         Map = map;
-
-        Task.Factory.StartNew(() =>
-        {
-            while (!_cts.IsCancellationRequested)
-            {
-                _input.Update();
-
-                if (_input.MousePosition.IsInRange(StartPos, Map.Size)) MouseOver?.Invoke(this, EventArgs.Empty);
-            }
-        }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
-    public void Dispose()
-    {
-        _cts.Cancel();
-        _cts.Dispose();
-    }
+    public bool IsHoveredOver(in NexusCoord mousePos) => mousePos.IsInRange(StartPos, Map.Size);
 }

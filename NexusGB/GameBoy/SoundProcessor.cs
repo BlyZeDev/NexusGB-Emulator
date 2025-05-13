@@ -1,5 +1,6 @@
 ﻿namespace NexusGB.GameBoy;
 
+using NexusGB.Common;
 using NexusGB.GameBoy.SoundChannels;
 using System.Collections.Immutable;
 using System.Diagnostics;
