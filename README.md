@@ -8,7 +8,7 @@
 - Very lightweight and performant due to running inside the console
 
 # UI Overview (as of v1.0.0-beta)
-![UIDemo](https://github.com/user-attachments/assets/efd5b2c0-7e25-4cd9-85c9-07fdfca04557)
+![UIDemo](https://github.com/BlyZeDev/NexusGB-Emulator/blob/master/Resources/UIDemo.png)
 
 # Game Demos
 <table>
@@ -17,7 +17,7 @@
     <th><h1>Tetris</h1></th>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/3db742ed-8fd9-4f20-9778-d7df112bfd1c"></td>
-    <td><img src="https://github.com/user-attachments/assets/27eac85d-0771-4f30-920f-bdc614ea97ca"></td>
+    <td><img src="https://github.com/BlyZeDev/NexusGB-Emulator/blob/master/Resources/BlueDemo.gif"></td>
+    <td><img src="https://github.com/BlyZeDev/NexusGB-Emulator/blob/master/Resources/TetrisDemo.gif"></td>
   </tr>
 </table>
