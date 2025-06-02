@@ -3,7 +3,6 @@
 using ConsoleNexusEngine.Graphics;
 using ConsoleNexusEngine.IO;
 using NexusGB.Statics;
-using System.Reflection;
 using System.Text.Json;
 
 public sealed class ConfigurationWatcher : IDisposable
@@ -38,10 +37,12 @@ public sealed class ConfigurationWatcher : IDisposable
 
     public ConfigurationWatcher()
     {
-        var directory = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ?? Environment.CurrentDirectory;
+        var directory = AppContext.BaseDirectory;
         var file = "NexusGB.config";
 
         ConfigPath = Path.Combine(directory, file);
+
+        Logger.LogInfo($"The configuration path is {ConfigPath}");
 
         if (!File.Exists(ConfigPath)) WriteConfigFile(ConfigPath, _defaultConfig);
         Current = ReadConfigFile(ConfigPath) ?? throw new FileNotFoundException($"The configuration file was not found.\nThe path should be {ConfigPath}");
