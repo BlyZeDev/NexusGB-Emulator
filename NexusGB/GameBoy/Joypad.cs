@@ -26,14 +26,20 @@ public sealed class Joypad
     private byte pad;
     private byte buttons;
 
-    public Joypad(MemoryManagement mmu) => _mmu = mmu;
+    public Dictionary<NexusKey, byte> ButtonMappings { get; set; }
 
-    public void HandleInputs(Dictionary<NexusKey, byte> controls, in NexusGamepad gamepad, in ImmutableArray<NexusKey> keys)
+    public Joypad(MemoryManagement mmu, Dictionary<NexusKey, byte> buttonMappings)
+    {
+        _mmu = mmu;
+        ButtonMappings = buttonMappings;
+    }
+
+    public void HandleInputs(in NexusGamepad gamepad, in ImmutableArray<NexusKey> keys)
     {
         pad = 0x0F;
         buttons = 0x0F;
 
-        foreach (var key in GetKeyCodes(controls, gamepad, keys))
+        foreach (var key in GetKeyCodes(gamepad, keys))
         {
             if ((key & PAD_MASK) == PAD_MASK)
                 pad = (byte)(pad & ~(key & 0x0F));
@@ -58,7 +64,7 @@ public sealed class Joypad
         if ((joystickPad & 0b00110000) == 0b00110000) _mmu.JoystickPad = 0xFF;
     }
 
-    private static IEnumerable<byte> GetKeyCodes(Dictionary<NexusKey, byte> controls, NexusGamepad gamepad, ImmutableArray<NexusKey> keys)
+    private IEnumerable<byte> GetKeyCodes(NexusGamepad gamepad, ImmutableArray<NexusKey> keys)
     {
         if (gamepad.LeftThumbX < -10_000) yield return _buttonMappings[NexusXInput.DirectionalPadLeft];
         else if (gamepad.LeftThumbX > 10_000) yield return _buttonMappings[NexusXInput.DirectionalPadRight];
@@ -74,7 +80,7 @@ public sealed class Joypad
 
         foreach (var key in keys)
         {
-            if (controls.TryGetValue(key, out var keyCode)) yield return keyCode;
+            if (ButtonMappings.TryGetValue(key, out var keyCode)) yield return keyCode;
         }
     }
 }

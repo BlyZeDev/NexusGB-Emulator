@@ -15,5 +15,5 @@ public readonly struct ClickableSprite : INexusSprite
         Map = map;
     }
 
-    public bool IsHoveredOver(in NexusCoord mousePos) => mousePos.IsInRange(StartPos, Map.Size);
+    public bool IsMouseOver(in NexusCoord mousePos) => mousePos.IsInRange(StartPos, Map.Size);
 }

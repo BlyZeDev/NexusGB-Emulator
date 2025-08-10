@@ -14,16 +14,16 @@ public sealed class ConfigurationWatcher : IDisposable
         Color3 = new NexusColor(0x40, 0x40, 0x40),
         Color4 = new NexusColor(0x00, 0x00, 0x00),
         BackgroundColor = NexusColor.Black,
-        Controls = new Dictionary<NexusKey, byte>
+        Controls = new Dictionary<GameBoyButton, NexusKey>
         {
-            { NexusKey.Up, 0x14 },
-            { NexusKey.Left, 0x12 },
-            { NexusKey.Right, 0x11 },
-            { NexusKey.Down, 0x18 },
-            { NexusKey.A, 0x21 },
-            { NexusKey.B, 0x22 },
-            { NexusKey.Back, 0x24 },
-            { NexusKey.Return, 0x28 }
+            { GameBoyButton.Right, NexusKey.Right },
+            { GameBoyButton.Left, NexusKey.Left },
+            { GameBoyButton.Up, NexusKey.Up },
+            { GameBoyButton.Down, NexusKey.Down },
+            { GameBoyButton.A, NexusKey.A },
+            { GameBoyButton.B, NexusKey.B },
+            { GameBoyButton.Select, NexusKey.Tab },
+            { GameBoyButton.Start, NexusKey.Return }
         }
     };
 

@@ -33,9 +33,9 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private int cpuCycles;
     private int cyclesThisUpdate;
 
-    public GameBoyEmulator(string romPath, string romSavePath)
+    public GameBoyEmulator(string romPath)
     {
-        _romSavePath = romSavePath;
+        _romSavePath = Path.ChangeExtension(romPath, ".sav");
         _watcher = new ConfigurationWatcher();
 
         _watcher.Changed += OnConfigChange;
@@ -65,7 +65,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         _cpu = new Processor(_mmu);
         _timer = new Timer(_mmu, _spu);
         _ppu = new PixelProcessor(Graphic, _mmu, BufferSize.Width, BufferSize.Height);
-        _joypad = new Joypad(_mmu);
+        _joypad = new Joypad(_mmu, current.Controls.ToDictionary(x => x.Value, x => (byte)x.Key));
 
         _rpc.SetGame(_mmu.GameTitle);
         Settings.Title = $"NexusGB - {_mmu.GameTitle}";
@@ -131,11 +131,11 @@ public sealed class GameBoyEmulator : NexusConsoleGame
 
             Input.UpdateGamepads();
             Input.Update();
-            _joypad.HandleInputs(_watcher.Current.Controls, Input.Gamepad1, Input.Keys);
+            _joypad.HandleInputs(Input.Gamepad1, Input.Keys);
 
             if (Input.Keys.Contains(NexusKey.MouseLeft))
             {
-                if (_configButton.IsHoveredOver(Input.MousePosition))
+                if (_configButton.IsMouseOver(Input.MousePosition))
                 {
                     using (var process = new Process())
                     {
@@ -151,7 +151,7 @@ public sealed class GameBoyEmulator : NexusConsoleGame
                     return;
                 }
 
-                if (_exitButton.IsHoveredOver(Input.MousePosition)) state = EmulatorState.WaitForConfirmation;
+                if (_exitButton.IsMouseOver(Input.MousePosition)) state = EmulatorState.WaitForConfirmation;
             }
 
             cyclesThisUpdate -= GameBoySystem.CyclesPerUpdate;
@@ -197,13 +197,13 @@ public sealed class GameBoyEmulator : NexusConsoleGame
         state = EmulatorState.WaitForConfirmation;
         if (Input.Keys.Contains(NexusKey.MouseLeft))
         {
-            if (yesBtn.IsHoveredOver(Input.MousePosition))
+            if (yesBtn.IsMouseOver(Input.MousePosition))
             {
                 state = EmulatorState.ShuttingDown;
                 return;
             }
 
-            if (noBtn.IsHoveredOver(Input.MousePosition))
+            if (noBtn.IsMouseOver(Input.MousePosition))
             {
                 state = EmulatorState.Running;
                 Graphic.DrawSprite(NexusCoord.MinValue, _overlaySprite);
@@ -221,6 +221,8 @@ public sealed class GameBoyEmulator : NexusConsoleGame
     private void OnConfigChange(object? sender, EmulatorConfig old)
     {
         var current = _watcher.Current;
+
+        _joypad.ButtonMappings = current.Controls.ToDictionary(x => x.Value, x => (byte)x.Key);
 
         var newPalette = new GameBoyColorPalette(current.Color1, current.Color2, current.Color3, current.Color4, current.BackgroundColor);
         if (Settings.ColorPalette.SequenceEqual(newPalette)) return;
