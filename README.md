@@ -7,7 +7,7 @@
 - Customizable keyboard/mouse controls
 - Very lightweight and performant due to running inside the console
 
-# UI Overview (as of v1.0.0-beta)
+# UI Overview
 ![UIDemo](https://github.com/BlyZeDev/NexusGB-Emulator/blob/master/Resources/UIDemo.png)
 
 # Game Demos
